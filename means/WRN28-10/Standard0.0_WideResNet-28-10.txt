@@ -1,0 +1,10 @@
+Steps 1 mean_en : -13.951330812135712
+Adversarial accuracy: 0.37%
+Steps 2 mean_en : -17.558850995311513
+Adversarial accuracy: 0.0098%
+Steps 5 mean_en : -22.31847603949718
+Adversarial accuracy: 0.0%
+Steps 10 mean_en : -25.484907118417322
+Adversarial accuracy: 0.0%
+Steps 20 mean_en : -28.213987762480976
+Adversarial accuracy: 0.00%
