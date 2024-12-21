@@ -97,6 +97,42 @@ def test_pgd_impact(steps : List[int],
 
     return
 
+def parseTxt(means_path, lines, end):
+    '''
+    Parses all txt files contained in means_path, creates a model where each
+    key is the model of a .txt file and its value is a list of lists where
+    dict[model] = [[mean_en], [adv_acc], [mean_delta]]
+    
+    Lines: controls how many initial lines of the .txt to skip when reading
+
+    End: shared end of file to remove when extracting names of models
+    '''
+    dict = {}
+    for filename in os.listdir(means_path):
+        if filename.endswith('.txt'):
+            name = filename.replace(end, '')
+            #name = name[:-7] + ' ' + name[-6:]
+            print('Found ', name)
+            means = []
+            acc = []
+            mean_delta = []
+            filepath = os.path.join(means_path, filename)
+            with open(filepath, 'r') as f:
+                for i, line in enumerate(f):
+                # currently skipping 10 lines because of old results
+                    if i > lines:
+                        if 'mean_en' in line:
+                            mean_en = float(line.split(':')[1].strip())
+                            means.append(mean_en)
+                        elif 'Adversarial accuracy' in line:
+                            adv_acc = float(line.split(':')[1].strip().replace('%', ''))
+                            acc.append(adv_acc)
+                        elif 'Mean delta' in line:
+                            delta = float(line.split(':')[1].strip())
+                            mean_delta.append(delta)
+            dict[name] = [means, acc, mean_delta]
+    return dict
+
 # standard energy
 def compute_energy(logits):
 	energy = -torch.logsumexp(logits, dim=1)
