@@ -2,6 +2,7 @@ import torch
 import os
 import time
 import numpy as np
+import math
 from torch.utils.data import dataloader, Dataset
 from typing import List
 from torchattacks import PGD
@@ -85,17 +86,34 @@ def test_pgd_impact(steps : List[int],
         , flush=True, end='')
 
       # change filepath accordingly
-      path = os.path.join(os.getcwd(), 'means\\Resnets')
-      with open(f"{path}\\{model_name}_{model_rob}.txt", "a") as file:
+      os.makedirs('./means/WRN28-10Rand', exist_ok=True)
+      path = os.path.join(os.getcwd(), 'means//WRN28-10Rand')
+      with open(f"{path}/{model_name}_{model_rob}.txt", "a") as file:
         file.write(f"\nSteps {steps[i]} mean_en : ")
         file.write(str(mean_en / (len(dataloader) * dataloader.batch_size)) + '\n')
         file.write(f"Adversarial accuracy: {100 * acc_adv / (len(dataloader) * dataloader.batch_size) :.2f}%\n")
         file.write(f"Mean delta: {delta / (len(dataloader) * dataloader.batch_size)}\n")
-        print('\n| * Saved values locally')
+        print('\n| * Saved values locally to ',  f"{path}/{model_name}_{model_rob}.txt")
 
       del attack
 
     return
+
+def rand_weights(model):
+    for name, param in model.named_parameters():
+        if param.requires_grad:  # Only initialize parameters that require gradients
+            if 'conv' in name.lower():  # Check if the parameter belongs to a convolutional layer
+                torch.nn.init.kaiming_uniform_(param.data, a=math.sqrt(5))  # Kaiming initialization
+            elif 'bias' in name:  # For bias parameters
+                torch.nn.init.constant_(param.data, 0.0)
+            elif 'bn' in name.lower():  # BatchNorm layers
+                if 'weight' in name:  # Gamma
+                    torch.nn.init.ones_(param.data)
+                elif 'bias' in name:  # Beta
+                    torch.nn.init.zeros_(param.data)
+            else:
+                # Optional: Define other initialization strategies for non-convolutional layers
+                pass
 
 def parseTxt(means_path, lines, end):
     '''
