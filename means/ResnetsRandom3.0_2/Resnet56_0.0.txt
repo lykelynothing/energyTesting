@@ -1,0 +1,16 @@
+
+Steps 1 mean_en : nan
+Adversarial accuracy: 9.81%
+Mean delta: nan
+
+Steps 2 mean_en : nan
+Adversarial accuracy: 9.81%
+Mean delta: nan
+
+Steps 5 mean_en : nan
+Adversarial accuracy: 9.76%
+Mean delta: nan
+
+Steps 10 mean_en : nan
+Adversarial accuracy: 9.78%
+Mean delta: nan
