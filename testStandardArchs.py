@@ -7,7 +7,7 @@ from energyUtils import test_pgd_impact
 
 os.makedirs(os.path.join(os.getcwd(), 'energyTesting/means/Resnets'), exist_ok=True)
 
-model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True, trust_repo=True)
+model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet44", pretrained=True, trust_repo=True)
 model.eval()
 
 preprocess = transforms.Compose([
@@ -18,6 +18,6 @@ preprocess = transforms.Compose([
 dataset = CIFAR10('./data', train=False, download=False, transform=preprocess)
 dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
-test_pgd_impact([1, 2, 5], model, 'Resnet56', dataloader)
+test_pgd_impact([10], model, 'Resnet44', dataloader)
 
 
