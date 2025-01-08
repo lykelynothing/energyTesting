@@ -39,6 +39,9 @@ def test_pgd_impact(steps : List[int],
     Now also stores difference between mean normal energy and mean adversarial energy.
     '''
     
+    model.loss_fn = torch.nn.CrossEntropyLoss()
+
+
     for i in range(len(steps)):
 
       start_time = time.time()
@@ -50,6 +53,7 @@ def test_pgd_impact(steps : List[int],
       acc_adv = 0
       mean_en = 0
       delta = 0
+      mean_xy = 0    
 
       attack = PGD(model, steps=steps[i])
       attack.set_normalization_used((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
@@ -66,13 +70,21 @@ def test_pgd_impact(steps : List[int],
             pred = model(X)
             pred_adv = model(adv)
         
+        en_x = sum(compute_energy(pred).detach().cpu().numpy())
+        adv_en_x = sum(compute_energy(pred_adv).detach().cpu().numpy())
+
         # compute mean energy of normal and adversarial logits and take  
         # their difference, accumulate and divide later
-        delta += sum(compute_energy(pred).detach().cpu().numpy() - compute_energy(pred_adv).detach().cpu().numpy())
+        delta += en_x - adv_en_x
         
         # Accumulate all energy values and divide at the end
-        mean_en += (sum(compute_energy(pred_adv).detach().cpu().numpy()))
-        
+        mean_en += adv_en_x
+
+        # Compute mean xy energy
+        en_xy = (sum(compute_energyxy(pred, y).detach().cpu().numpy()))
+        adv_en_xy = (sum(compute_energyxy(pred_adv, y).detach().cpu().numpy()))
+        mean_xy += adv_en_xy 
+
         predicted_labels = torch.argmax(pred_adv, dim=1)
         matches = (y == predicted_labels)
         acc_adv += matches.sum().item()
@@ -91,8 +103,10 @@ def test_pgd_impact(steps : List[int],
       with open(f"{path}/{model_name}_{model_rob}.txt", "a") as file:
         file.write(f"\nSteps {steps[i]} mean_en : ")
         file.write(str(mean_en / (len(dataloader) * dataloader.batch_size)) + '\n')
+
         file.write(f"Adversarial accuracy: {100 * acc_adv / (len(dataloader) * dataloader.batch_size) :.2f}%\n")
         file.write(f"Mean delta: {delta / (len(dataloader) * dataloader.batch_size)}\n")
+        file.write(f"Mean xy: {mean_xy / (len(dataloader) * dataloader.batch_size)}\n")
         print('\n| * Saved values locally to ',  f"{path}/{model_name}_{model_rob}.txt")
 
       del attack
@@ -158,7 +172,7 @@ def compute_energy(logits):
 	energy = -torch.logsumexp(logits, dim=1)
 	return energy
 
-# returns joint energy of predicted label
+# returns joint energy of ground truth label
 def compute_energyxy(logits, labels):
 	correct_logits = logits[torch.arange(logits.size(0)), labels]
 	energy = -correct_logits
