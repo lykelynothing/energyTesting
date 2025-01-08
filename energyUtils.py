@@ -31,7 +31,7 @@ class ImageNetSingleImage(Dataset):
 
 def test_pgd_impact(steps : List[int],
                 model : torch.nn.Module, model_name : str, 
-                dataloader : torch.utils.data.DataLoader, model_rob: str = '0.0', 
+                dataloader : torch.utils.data.DataLoader, dir : str, model_rob: str = '0.0', 
                 device : str = 'cpu') -> None :
     '''
     Takes a list of different steps of PGD to try, a model, a dataloader and
@@ -82,12 +82,12 @@ def test_pgd_impact(steps : List[int],
         time_est_prev = time_est
 
         bar = '#' * int(((batch + 1) / (len(dataloader))) * 20)
-        print(f"\r| Current steps: {steps[i]} [{bar}] {( (batch + 1) / len(dataloader) ) * 100:.1f}% | Est. Time{(time_est * len(dataloader))/ 60: .2f} min | Elapsed {(time_prev - start_time) / 60 : .2f} min | Adv Acc: {(acc_adv / ((batch+1) * dataloader.batch_size)) * 100:.2f}% | Correct : {acc_adv} | Delta : {delta / ( (batch + 1) * dataloader.batch_size) :.2f}"
+        print(f"\r| {model_name} | Current steps: {steps[i]} [{bar}] {( (batch + 1) / len(dataloader) ) * 100:.1f}% | Est. Time{(time_est * len(dataloader))/ 60: .2f} min | Elapsed {(time_prev - start_time) / 60 : .2f} min | Adv Acc: {(acc_adv / ((batch+1) * dataloader.batch_size)) * 100:.2f}% | Correct : {acc_adv} | Delta : {delta / ( (batch + 1) * dataloader.batch_size) :.2f}"
         , flush=True, end='')
 
       # change filepath accordingly
-      os.makedirs('./means/ResnetsRandomTest', exist_ok=True)
-      path = os.path.join(os.getcwd(), 'means/ResnetsRandomTest')
+      os.makedirs(f"./means/{dir}", exist_ok=True)
+      path = os.path.join(os.getcwd(), f"means/{dir}")
       with open(f"{path}/{model_name}_{model_rob}.txt", "a") as file:
         file.write(f"\nSteps {steps[i]} mean_en : ")
         file.write(str(mean_en / (len(dataloader) * dataloader.batch_size)) + '\n')
