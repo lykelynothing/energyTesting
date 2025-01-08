@@ -140,7 +140,7 @@ def parseTxt(means_path, lines, end):
             with open(filepath, 'r') as f:
                 for i, line in enumerate(f):
                 # currently skipping 10 lines because of old results
-                    if i > lines:
+                    if i >= lines:
                         if 'mean_en' in line:
                             mean_en = float(line.split(':')[1].strip())
                             means.append(mean_en)
