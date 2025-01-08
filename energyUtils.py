@@ -32,7 +32,7 @@ class ImageNetSingleImage(Dataset):
 def test_pgd_impact(steps : List[int],
                 model : torch.nn.Module, model_name : str, 
                 dataloader : torch.utils.data.DataLoader, dir : str, model_rob: str = '0.0', 
-                device : str = 'cpu') -> None :
+                device : str = 'cpu', alpha : float = 2/255, eps : float = 8/255) -> None :
     '''
     Takes a list of different steps of PGD to try, a model, a dataloader and
     a list where the mean energies for each kind of PGD step will be stored.
