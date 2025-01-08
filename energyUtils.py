@@ -31,7 +31,7 @@ class ImageNetSingleImage(Dataset):
 
 def test_pgd_impact(steps : List[int],
                 model : torch.nn.Module, model_name : str, 
-                dataloader : torch.utils.data.DataLoader, model_rob: str = '0.0', 
+                dataloader : torch.utils.data.DataLoader, dir : str, model_rob: str = '0.0', 
                 device : str = 'cpu') -> None :
     '''
     Takes a list of different steps of PGD to try, a model, a dataloader and
@@ -82,12 +82,12 @@ def test_pgd_impact(steps : List[int],
         time_est_prev = time_est
 
         bar = '#' * int(((batch + 1) / (len(dataloader))) * 20)
-        print(f"\r| Current steps: {steps[i]} [{bar}] {( (batch + 1) / len(dataloader) ) * 100:.1f}% | Est. Time{(time_est * len(dataloader))/ 60: .2f} min | Elapsed {(time_prev - start_time) / 60 : .2f} min | Adv Acc: {(acc_adv / ((batch+1) * dataloader.batch_size)) * 100:.2f}% | Correct : {acc_adv} | Delta : {delta / ( (batch + 1) * dataloader.batch_size) :.2f}"
+        print(f"\r| {model_name} | Current steps: {steps[i]} [{bar}] {( (batch + 1) / len(dataloader) ) * 100:.1f}% | Est. Time{(time_est * len(dataloader))/ 60: .2f} min | Elapsed {(time_prev - start_time) / 60 : .2f} min | Adv Acc: {(acc_adv / ((batch+1) * dataloader.batch_size)) * 100:.2f}% | Correct : {acc_adv} | Delta : {delta / ( (batch + 1) * dataloader.batch_size) :.2f}"
         , flush=True, end='')
 
       # change filepath accordingly
-      os.makedirs('./means/WRN28-10Rand', exist_ok=True)
-      path = os.path.join(os.getcwd(), 'means//WRN28-10Rand')
+      os.makedirs(f"./means/{dir}", exist_ok=True)
+      path = os.path.join(os.getcwd(), f"means/{dir}")
       with open(f"{path}/{model_name}_{model_rob}.txt", "a") as file:
         file.write(f"\nSteps {steps[i]} mean_en : ")
         file.write(str(mean_en / (len(dataloader) * dataloader.batch_size)) + '\n')
@@ -102,18 +102,20 @@ def test_pgd_impact(steps : List[int],
 def rand_weights(model):
     for name, param in model.named_parameters():
         if param.requires_grad:  # Only initialize parameters that require gradients
-            if 'conv' in name.lower():  # Check if the parameter belongs to a convolutional layer
-                torch.nn.init.kaiming_uniform_(param.data, a=math.sqrt(5))  # Kaiming initialization
-            elif 'bias' in name:  # For bias parameters
-                torch.nn.init.constant_(param.data, 0.0)
+            if 'conv' in name.lower():  # Convolutional layers
+                torch.nn.init.kaiming_uniform_(param.data, a=math.sqrt(5))  # Kaiming initialization for conv layers
             elif 'bn' in name.lower():  # BatchNorm layers
                 if 'weight' in name:  # Gamma
                     torch.nn.init.ones_(param.data)
                 elif 'bias' in name:  # Beta
                     torch.nn.init.zeros_(param.data)
-            else:
-                # Optional: Define other initialization strategies for non-convolutional layers
-                pass
+            elif 'fc' in name.lower():  # Fully connected (Linear) layers
+                if param.dim() == 2:  # Weights of the linear layer
+                    torch.nn.init.xavier_uniform_(param.data)  # Xavier initialization
+                elif param.dim() == 1:  # Bias of the linear layer
+                    torch.nn.init.zeros_(param.data)  # Initialize bias to 0
+            elif 'bias' in name:  # General bias terms
+                torch.nn.init.constant_(param.data, 0.0)
 
 def parseTxt(means_path, lines, end):
     '''
