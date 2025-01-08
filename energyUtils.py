@@ -86,8 +86,8 @@ def test_pgd_impact(steps : List[int],
         , flush=True, end='')
 
       # change filepath accordingly
-      os.makedirs('./means/WRN28-10Rand', exist_ok=True)
-      path = os.path.join(os.getcwd(), 'means//WRN28-10Rand')
+      os.makedirs('./means/ResnetsRandomTest', exist_ok=True)
+      path = os.path.join(os.getcwd(), 'means/ResnetsRandomTest')
       with open(f"{path}/{model_name}_{model_rob}.txt", "a") as file:
         file.write(f"\nSteps {steps[i]} mean_en : ")
         file.write(str(mean_en / (len(dataloader) * dataloader.batch_size)) + '\n')
@@ -101,9 +101,10 @@ def test_pgd_impact(steps : List[int],
 
 def rand_weights(model):
     for name, param in model.named_parameters():
-        if param.requires_grad:  # Only initialize parameters that require gradients
+        if param.requires_grad:
             if 'conv' in name.lower():  # Check if the parameter belongs to a convolutional layer
-                torch.nn.init.kaiming_uniform_(param.data, a=math.sqrt(5))  # Kaiming initialization
+                torch.nn.init.normal_(param.data)
+                #torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')  
             elif 'bias' in name:  # For bias parameters
                 torch.nn.init.constant_(param.data, 0.0)
             elif 'bn' in name.lower():  # BatchNorm layers
@@ -111,6 +112,15 @@ def rand_weights(model):
                     torch.nn.init.ones_(param.data)
                 elif 'bias' in name:  # Beta
                     torch.nn.init.zeros_(param.data)
+            if 'downsample' in name.lower():
+                if '1' in name.lower():
+                    if 'bias' in name.lower():
+                        torch.nn.init.zeros_(param.data)
+                    else:
+                         torch.nn.init.ones_(param.data)
+                else:
+                    torch.nn.init.normal_(param.data)
+                    #torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')
             else:
                 # Optional: Define other initialization strategies for non-convolutional layers
                 pass
