@@ -115,21 +115,29 @@ def test_pgd_impact(steps : List[int],
 
 def rand_weights(model):
     for name, param in model.named_parameters():
-        if param.requires_grad:  # Only initialize parameters that require gradients
-            if 'conv' in name.lower():  # Convolutional layers
-                torch.nn.init.kaiming_uniform_(param.data, a=math.sqrt(5))  # Kaiming initialization for conv layers
+        if param.requires_grad:
+            if 'conv' in name.lower():  # Check if the parameter belongs to a convolutional layer
+                torch.nn.init.normal_(param.data)
+                #torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')  
+            elif 'bias' in name:  # For bias parameters
+                torch.nn.init.constant_(param.data, 0.0)
             elif 'bn' in name.lower():  # BatchNorm layers
                 if 'weight' in name:  # Gamma
                     torch.nn.init.ones_(param.data)
                 elif 'bias' in name:  # Beta
                     torch.nn.init.zeros_(param.data)
-            elif 'fc' in name.lower():  # Fully connected (Linear) layers
-                if param.dim() == 2:  # Weights of the linear layer
-                    torch.nn.init.xavier_uniform_(param.data)  # Xavier initialization
-                elif param.dim() == 1:  # Bias of the linear layer
-                    torch.nn.init.zeros_(param.data)  # Initialize bias to 0
-            elif 'bias' in name:  # General bias terms
-                torch.nn.init.constant_(param.data, 0.0)
+            if 'downsample' in name.lower():
+                if '1' in name.lower():
+                    if 'bias' in name.lower():
+                        torch.nn.init.zeros_(param.data)
+                    else:
+                         torch.nn.init.ones_(param.data)
+                else:
+                    torch.nn.init.normal_(param.data)
+                    #torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')
+            else:
+                # Optional: Define other initialization strategies for non-convolutional layers
+                pass
 
 def parseTxt(means_path, lines, end):
     '''
