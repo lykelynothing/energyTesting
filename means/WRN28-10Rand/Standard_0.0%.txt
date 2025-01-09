@@ -9,3 +9,23 @@ Mean delta: 1489517184.0
 Steps 5 mean_en : -11947177000.0
 Adversarial accuracy: 9.77%
 Mean delta: 2620893184.0
+
+Steps 1 mean_en : -2.2989128
+Adversarial accuracy: 9.98%
+Mean delta: 0.0
+Mean xy: 0.0
+
+Steps 2 mean_en : -2.2989128
+Adversarial accuracy: 9.98%
+Mean delta: 0.0
+Mean xy: 0.0
+
+Steps 1 mean_en : -2.2989128
+Adversarial accuracy: 9.98%
+Mean delta: 0.0
+Mean xy: 0.0
+
+Steps 2 mean_en : -2.2989128
+Adversarial accuracy: 9.98%
+Mean delta: 0.0
+Mean xy: 0.0
