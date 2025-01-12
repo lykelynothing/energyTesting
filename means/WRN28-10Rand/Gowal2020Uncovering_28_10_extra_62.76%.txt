@@ -19,3 +19,17 @@ Mean delta: 0.12426689267158508
 Mean xy: 1.5584551095962524
 Mean Normal Energy : -0.003926912322640419
 Mean Normal E xy : 0.0006526250508613884
+
+Steps 10 mean_en : -2.5340421
+Adversarial accuracy: 0.30%
+Mean delta: 0.1569041609764099
+Mean xy: 1.8038455247879028
+Mean Normal Energy : -0.003806114662438631
+Mean Normal E xy : -1.2888212040707003e-05
+
+Steps 20 mean_en : -2.5483642
+Adversarial accuracy: 0.01%
+Mean delta: 0.1710757166147232
+Mean xy: 1.9057207107543945
+Mean Normal Energy : -0.003792454255744815
+Mean Normal E xy : 0.00018799563986249268
