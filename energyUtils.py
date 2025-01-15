@@ -3,10 +3,12 @@ import os
 import time
 import numpy as np
 import math
+from torch.nn.utils import prune
 from torch.utils.data import dataloader, Dataset
 from typing import List
 from torchattacks import PGD
 from PIL import Image
+
 
 class ImageNetSingleImage(Dataset):
 		def __init__(self, dir, transform=None):
@@ -27,6 +29,17 @@ class ImageNetSingleImage(Dataset):
 
 			return image, label 
 
+def check_pruning(model):
+    for name, module in model.named_modules():
+        if prune.is_pruned(module):
+            print(f"Layer '{name}' is pruned.")
+        else:
+            print(f"Layer '{name}' is not pruned.")
+
+def count_parameters(model):
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    return total_params, trainable_params
 
 
 def test_pgd_impact(steps : List[int],
@@ -122,8 +135,8 @@ def rand_weights(model):
     for name, param in model.named_parameters():
         if param.requires_grad:
             if 'conv' in name.lower():  # Check if the parameter belongs to a convolutional layer
-                torch.nn.init.normal_(param.data)
-                #torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')  
+                #torch.nn.init.normal_(param.data)
+                torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')  
             elif 'bias' in name:  # For bias parameters
                 torch.nn.init.constant_(param.data, 0.0)
             elif 'bn' in name.lower():  # BatchNorm layers
