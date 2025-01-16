@@ -109,7 +109,7 @@ def test_pgd_impact(steps : List[int],
         bar = '#' * int(((batch + 1) / (len(dataloader))) * 20)
         print(f"\r| {model_name} | Current steps: {steps[i]} [{bar}] {( (batch + 1) / len(dataloader) ) * 100:.1f}% | Est. Time{(time_est * len(dataloader))/ 60: .2f} min" 
               + f"| Elapsed {(time_prev - start_time) / 60 : .2f} min | Adv Acc: {(acc_adv / ((batch+1) * dataloader.batch_size)) * 100:.2f}%" 
-              + f"| Correct : {acc_adv} | Delta : {delta / ( (batch + 1) * dataloader.batch_size) :.2f} | Mean : {mean_en / ( (batch + 1) * dataloader.batch_size)}"
+              + f"| Correct : {acc_adv} | Delta : {delta / ( (batch + 1) * dataloader.batch_size) :.4f} | Mean : {mean_en / ( (batch + 1) * dataloader.batch_size)}"
               + f"\nMean Normal : {en_x/ ( (batch + 1) * dataloader.batch_size)} | Normal xy : {en_xy / ( (batch + 1) * dataloader.batch_size)}"
         , flush=True, end='')
 
@@ -144,7 +144,7 @@ def rand_weights(model):
                     torch.nn.init.ones_(param.data)
                 elif 'bias' in name:  # Beta
                     torch.nn.init.zeros_(param.data)
-            if 'downsample' in name.lower():
+            elif 'downsample' in name.lower():
                 if '1' in name.lower():
                     if 'bias' in name.lower():
                         torch.nn.init.zeros_(param.data)
@@ -153,6 +153,8 @@ def rand_weights(model):
                 else:
                     torch.nn.init.normal_(param.data)
                     #torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')
+            elif 'fc.weight' in name.lower():
+                torch.nn.init.normal_(param.data, mean=0.0, std=0.02)
             else:
                 # Optional: Define other initialization strategies for non-convolutional layers
                 pass
