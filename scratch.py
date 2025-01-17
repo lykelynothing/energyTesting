@@ -17,30 +17,32 @@ def hook_fn(module, input, output):
     outputs[module] = input[0], output[0]
 
 model = wrn_28_10(nn.Conv2d, nn.Linear, nn.SiLU, 'kaiming_normal', dropRate=0)
+model.train()
 rand_weights(model)
-
+# check out second block first stage
 for block in list(model.children())[1:-3]:
-   block.layer[0].conv1.register_forward_hook(hook_fn)
+   block.layer[0].conv2.register_forward_hook(hook_fn)
 
 # Print mean of outputs and of inner layers outputs
 print('Custom outputs: ', torch.mean(model((torch.unsqueeze(x, 0)))).item())
 
-print('Custom inner: ', [torch.mean(outputs[t][1]).item() for t in outputs.keys()])
+print('Inner inputs 4th block first stage: ', [torch.mean(outputs[t][0]).item() for t in outputs.keys()])
 
-print('Mean conv weight: ', torch.mean(model.block2.layer[2].conv1.weight).item())
+print('Mean conv weight: ', torch.mean(model.block2.layer[0].conv1.weight).item())
 
 
 # Same for standard
 outputs = {}
 
 model = load_model('Standard', dataset='cifar10', threat_model='Linf')
+model.train()
 rand_weights(model)
 
 for block in list(model.children())[1:-3]: # Ignores first and last conv and bn
-    block.layer[0].conv1.register_forward_hook(hook_fn)
+    block.layer[0].conv2.register_forward_hook(hook_fn)
 
 print('Standard: ', torch.mean(model((torch.unsqueeze(x, 0)))).item())
 
-print('Inner outputs: ', [torch.mean(outputs[t][1]).item() for t in outputs.keys()])
+print('Inner inputs ith block first stage: ', [torch.mean(outputs[t][0]).item() for t in outputs.keys()])
 
-print('Conv weight: ', torch.mean(model.block2.layer[2].conv1.weight).item())
+print('Conv weight: ', torch.mean(model.block2.layer[0].conv1.weight).item())
