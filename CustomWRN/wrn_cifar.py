@@ -5,15 +5,15 @@ import torch.nn.functional as F
 
 
 class BasicBlock(nn.Module):
-    def __init__(self, conv_layer, in_planes, out_planes, stride, dropRate=0.0):
+    def __init__(self, conv_layer, act_fn, in_planes, out_planes, stride, dropRate=0.0):
         super(BasicBlock, self).__init__()
         self.bn1 = nn.BatchNorm2d(in_planes)
-        self.relu1 = nn.ReLU(inplace=True)
+        self.relu1 = act_fn(inplace=True)
         self.conv1 = conv_layer(
             in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False
         )
         self.bn2 = nn.BatchNorm2d(out_planes)
-        self.relu2 = nn.ReLU(inplace=True)
+        self.relu2 = act_fn(inplace=True)
         self.conv2 = conv_layer(
             out_planes, out_planes, kernel_size=3, stride=1, padding=1, bias=False
         )
@@ -46,21 +46,22 @@ class BasicBlock(nn.Module):
 
 class NetworkBlock(nn.Module):
     def __init__(
-        self, nb_layers, in_planes, out_planes, block, conv_layer, stride, dropRate=0.0
+        self, nb_layers, act_fn, in_planes, out_planes, block, conv_layer, stride, dropRate=0.0
     ):
         super(NetworkBlock, self).__init__()
         self.layer = self._make_layer(
-            conv_layer, block, in_planes, out_planes, nb_layers, stride, dropRate
+            conv_layer, act_fn, block, in_planes, out_planes, nb_layers, stride, dropRate
         )
 
     def _make_layer(
-        self, conv_layer, block, in_planes, out_planes, nb_layers, stride, dropRate
+        self, conv_layer, act_fn, block, in_planes, out_planes, nb_layers, stride, dropRate
     ):
         layers = []
         for i in range(int(nb_layers)):
             layers.append(
                 block(
                     conv_layer,
+                    act_fn,
                     i == 0 and in_planes or out_planes,
                     out_planes,
                     i == 0 and stride or 1,
@@ -78,6 +79,7 @@ class WideResNet(nn.Module):
         self,
         conv_layer,
         linear_layer,
+        act_fn,
         depth=34,
         num_classes=10,
         widen_factor=10,
@@ -94,23 +96,20 @@ class WideResNet(nn.Module):
         )
         # 1st block
         self.block1 = NetworkBlock(
-            n, nChannels[0], nChannels[1], block, conv_layer, 1, dropRate
+            n, act_fn, nChannels[0], nChannels[1], block, conv_layer, 1, dropRate
         )
-        # 1st sub-block
-        self.sub_block1 = NetworkBlock(
-            n, nChannels[0], nChannels[1], block, conv_layer, 1, dropRate
-        )
+
         # 2nd block
         self.block2 = NetworkBlock(
-            n, nChannels[1], nChannels[2], block, conv_layer, 2, dropRate
+            n, act_fn, nChannels[1], nChannels[2], block, conv_layer, 2, dropRate
         )
         # 3rd block
         self.block3 = NetworkBlock(
-            n, nChannels[2], nChannels[3], block, conv_layer, 2, dropRate
+            n, act_fn, nChannels[2], nChannels[3], block, conv_layer, 2, dropRate
         )
         # global average pooling and classifier
         self.bn1 = nn.BatchNorm2d(nChannels[3])
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = act_fn(inplace=True)
         self.fc = linear_layer(nChannels[3], num_classes)
         self.nChannels = nChannels[3]
 
@@ -136,9 +135,9 @@ class WideResNet(nn.Module):
 
 
 # NOTE: Only supporting default (kaiming_init) initializaition.
-def wrn_28_10(conv_layer, linear_layer, init_type, **kwargs):
+def wrn_28_10(conv_layer, linear_layer, act_fn, init_type, **kwargs):
     assert init_type == "kaiming_normal", "only supporting default init for WRN"
-    return WideResNet(conv_layer, linear_layer, depth=28, widen_factor=10, **kwargs)
+    return WideResNet(conv_layer, linear_layer, act_fn, depth=28, widen_factor=10, **kwargs)
 
 
 def wrn_28_4(conv_layer, linear_layer, init_type, **kwargs):
