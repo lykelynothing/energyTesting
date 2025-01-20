@@ -131,33 +131,40 @@ def test_pgd_impact(steps : List[int],
 
     return
 
-def rand_weights(model):
-    for name, param in model.named_parameters():
-        if param.requires_grad:
-            if 'conv' in name.lower():  # Check if the parameter belongs to a convolutional layer
-                #torch.nn.init.normal_(param.data)
-                torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')  
-            elif 'bias' in name:  # For bias parameters
-                torch.nn.init.constant_(param.data, 0.0)
-            elif 'bn' in name.lower():  # BatchNorm layers
-                if 'weight' in name:  # Gamma
-                    torch.nn.init.ones_(param.data)
-                elif 'bias' in name:  # Beta
-                    torch.nn.init.zeros_(param.data)
-            elif 'downsample' in name.lower():
-                if '1' in name.lower():
-                    if 'bias' in name.lower():
+def rand_weights(model, inplace : bool = True, track : bool = True):
+    for n, module in model.named_modules(): 
+        for name, param in module.named_parameters(recurse=False):
+            if param.requires_grad:
+                if 'conv' in n.lower() and 'weight' in name:  # Check if conv
+                    #torch.nn.init.normal_(param.data)
+                    torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')  
+                elif 'bias' in name:  # For bias parameters
+                    torch.nn.init.constant_(param.data, 0.0)
+                elif 'bn' in n.lower():  # BatchNorm layer
+                    if 'weight' in name:  # Gamma
+                        torch.nn.init.ones_(param.data)
+                    elif 'bias' in name:  # Beta
                         torch.nn.init.zeros_(param.data)
+                    if not track: # index modules dict to find right module and change its flag
+                        module.track_running_stats = False
+                elif 'downsample' in name.lower(): # some custom wrns have this
+                    if '1' in name.lower():
+                        if 'bias' in name.lower():
+                            torch.nn.init.zeros_(param.data)
+                        else:
+                            torch.nn.init.ones_(param.data)
                     else:
-                         torch.nn.init.ones_(param.data)
+                        torch.nn.init.normal_(param.data)
+                        #torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')
+                elif 'weight' in name.lower() and ('fc' or 'linear') in n:
+                    torch.nn.init.normal_(param.data, mean=0.0, std=0.02)
                 else:
-                    torch.nn.init.normal_(param.data)
-                    #torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')
-            elif 'fc.weight' in name.lower():
-                torch.nn.init.normal_(param.data, mean=0.0, std=0.02)
+                    print("No param condition: ", name, n) # To check if some parameters weren't caught
             else:
-                # Optional: Define other initialization strategies for non-convolutional layers
-                pass
+                 print('No grad: ', name, n)
+        if 'relu' in n.lower(): # act_fns should go here, in general all parms with no req_grad
+            module.inplace = inplace
+
 
 def parseTxt(means_path, lines, end):
     '''
