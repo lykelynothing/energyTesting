@@ -157,7 +157,7 @@ def rand_weights(model, inplace : bool = True, track : bool = True):
                         torch.nn.init.normal_(param.data)
                         #torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')
                 elif 'weight' in name.lower() and ('fc' or 'linear') in n:
-                    torch.nn.init.normal_(param.data, mean=0.0, std=0.02)
+                    torch.nn.init.normal_(param.data, mean=0.0, std=0.2)
                 else:
                     print("No param condition: ", name, n) # To check if some parameters weren't caught
             else:
