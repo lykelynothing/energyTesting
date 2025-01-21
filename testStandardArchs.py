@@ -1,10 +1,12 @@
 import torch
+import torch.nn as nn
 import os
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 from energyUtils import test_pgd_impact, rand_weights
 from robustbench.utils import load_model
+from CustomWRN.wrn_cifar import wrn_28_10
 
 os.makedirs(os.path.join(os.getcwd(), 'means'), exist_ok=True)
 os.environ['TORCH_HOME'] = 'E:\\torch\\cache\\checkpoints'
@@ -30,28 +32,31 @@ models = {'Standard' : '0.0%', 'Sehwag2020Hydra' : '57.14%', 'Wang2020Improving'
 
 '''
 # WRN 34-10
-models = {'Zhang2020Attacks' : '53.51%', 'Zhang2019You' : '44.83%', 'Wu2020Adversarial' : '56.17%',
-            'Chen2024Data_WRN_34_10' : '57.30%', 'Addepalli2021Towards_WRN34' : '58.04%', 'Sehwag2021Proxy' : '60.27%',
+models = {'Zhang2019You' : '44.83%', 'Zhang2020Attacks' : '53.51%', 'Sehwag2021Proxy' : '60.27%', 'Wu2020Adversarial' : '56.17%', 
+            'Chen2024Data_WRN_34_10' : '57.30%', 'Addepalli2021Towards_WRN34' : '58.04%', 
             'Rade2021Helper_extra' : '62.83%', 'Huang2020Self' : '53.34%', 'Sitawarin2020Improving' : '50.72%', 
             'Chen2020Efficient' : '51.12%', 'Cui2020Learnable_34_10' : '52.86%', 'Chen2021LTD_WRN34_10' : '56.94%'}
-
-
+'''
+'''
 #models = {'Sitawarin2020Improving' : '50.72%', 'Chen2020Efficient' : '51.12%',
            'Cui2020Learnable_34_10' : '52.86%', 'Chen2021LTD_WRN34_10' : '56.94%'}
 
 #models = {'Chen2020Efficient' : '51.12%', 'Cui2020Learnable_34_10' : '52.86%'}
 '''
 
-models = {'Gowal2020Uncovering_28_10_extra' : '62.76%', 'Wang2023Better_WRN-28-10' : '67.31%', 'Cui2023Decoupled_WRN-28-10' : '67.74%'}
+# 28-10 with different act fns (ReLU, SiLU and Swift)
+models = {'Standard' : '0.0%', 'Gowal2020Uncovering_28_10_extra' : '62.76%', 'Wang2023Better_WRN-28-10' : '67.31%', 'Cui2023Decoupled_WRN-28-10' : '67.74%'}
+
+#models = {'WRN28-10ReLU' : nn.ReLU, 'WRN28-10SiLU' : nn.SiLU} 
 
 for model_name in models:
     #model_name = f"Resnet{model_numb}"
     #model = torch.hub.load("chenyaofo/pytorch-cifar-models", f"cifar10_resnet{model_numb}", pretrained=True, trust_repo=True)
-    
     model = load_model(model_name, dataset='cifar10', threat_model='Linf')
-    model.eval()
+    #model = wrn_28_10(nn.Conv2d, nn.Linear, models[model_name], 'kaiming_normal', dropRate=0)
+    model.train()
     model.to(device)
-    #rand_weights(model)
+    rand_weights(model)
     print(f'Testing {model_name}')
-    test_pgd_impact([20, 50], model, model_name, dataloader, 'WRN28-10', model_rob=models[model_name], device=device)
+    test_pgd_impact([10, 20], model, model_name, dataloader, 'CustomWRN28-10Rand3', model_rob=models[model_name], device=device, alpha=2/255, eps=8/255)
     del model

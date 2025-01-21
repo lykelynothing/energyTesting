@@ -15,20 +15,17 @@ dict6 = parseTxt('./energyTesting/means/ResnetsRandom6')
 steps = [1, 2, 5, 10, 20, 30, 50]
 
 '''
-
-dict = parseTxt('./energyTesting/means/WRN28-10', 0, '_WideResNet-28-10.txt')
-print(dict)
+dict = parseTxt('./means/WRN28-10RandMeaningful', 0, '.txt')
 steps = [1, 2, 5, 10, 20]
 
 plt.figure(figsize=(12, 8))
 
-
 colors=['blue', 'orange', 'red', 'green']
-
 
 for i, model in enumerate(dict):
     print(model)
-    plt.plot(steps, dict[model][0], label=model, marker='^')
+    print(dict[model][2])
+    plt.plot(steps, dict[model][2], label=model, marker='^')
     #for i, (x, y) in enumerate(zip(dict[model][2], dict[model][1])):
     #    plt.text(x, y, f'{steps[i]}', fontsize=6)
 
@@ -38,11 +35,11 @@ for i, model in enumerate(dict):
 #plt.xlim(-1, 1)
 #plt.xscale('symlog')
 #plt.yscale('symlog')
-plt.ylabel('Mean E(x)')
+plt.ylabel('Delta E(x)')
 plt.xlabel('Steps')
 plt.legend(loc='best')
-plt.title('Pgd steps vs Mean E(x) WRN28-10')
+plt.title('Pgd steps vs Delta E(x) WRN28-10 Random')
 plt.grid(linewidth=0.3)
 os.makedirs('./energyTesting/plots', exist_ok=True)
-plt.savefig('./energyTesting/plots/ArchsCompared28-10.pdf')
+plt.savefig('./energyTesting/plots/final.pdf')
 plt.show()
