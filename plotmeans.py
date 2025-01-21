@@ -15,8 +15,8 @@ dict6 = parseTxt('./energyTesting/means/ResnetsRandom6')
 steps = [1, 2, 5, 10, 20, 30, 50]
 
 '''
-dict = parseTxt('./means/WRN28-10RandMeaningful', 0, '.txt')
-steps = [1, 2, 5, 10, 20]
+dict = parseTxt('./means/WRN28-10RandMeaningful2', 0, '.txt')
+steps = [1, 2, 4, 5, 10, 20]
 
 plt.figure(figsize=(12, 8))
 

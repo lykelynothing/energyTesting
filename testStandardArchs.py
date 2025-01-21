@@ -58,5 +58,5 @@ for model_name in models:
     model.to(device)
     rand_weights(model)
     print(f'Testing {model_name}')
-    test_pgd_impact([10, 20], model, model_name, dataloader, 'CustomWRN28-10Rand3', model_rob=models[model_name], device=device, alpha=2/255, eps=8/255)
+    test_pgd_impact([1, 2, 4, 5, 10, 20], model, model_name, dataloader, 'WRN28-10RandMeaningful2', model_rob=models[model_name], device=device, alpha=2/255, eps=8/255)
     del model
