@@ -1,0 +1,14 @@
+
+Steps 5 mean_en : -15.035831
+Adversarial accuracy: 0.32%
+Mean delta: 6.1298298835754395
+Mean xy: 12.241836547851562
+Mean Normal Energy : -0.014246578328311443
+Mean Normal E xy : 0.0030334610491991043
+
+Steps 5 mean_en : -25.916191
+Adversarial accuracy: 0.44%
+Mean delta: 4.663671493530273
+Mean xy: 10.994542121887207
+Mean Normal Energy : -0.034394506365060806
+Mean Normal E xy : -0.008100979030132294
