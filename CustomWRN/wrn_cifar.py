@@ -81,14 +81,28 @@ class WideResNet(nn.Module):
         linear_layer,
         act_fn,
         depth=34,
+        custom_depths = None,
         num_classes=10,
         widen_factor=10,
+        custom_widen_factor=None,
         dropRate=0.0,
     ):
         super(WideResNet, self).__init__()
-        nChannels = [16, 16 * widen_factor, 32 * widen_factor, 64 * widen_factor]
+        
+        # Custom widths
+        if not custom_widen_factor: 
+            nChannels = [16, 16 * widen_factor, 32 * widen_factor, 64 * widen_factor]
+        else:
+            nChannels = [16]
+            base_n_channels = [16, 32, 64]
+            for i in range(len(custom_widen_factor)):
+                nChannels.append(base_n_channels[i] * custom_widen_factor[i])
         assert (depth - 4) % 6 == 0
-        n = (depth - 4) / 6
+        # Custom depths 
+        if not custom_depths:
+            n = [(depth - 4) / 6] * 3 # Makes list three elements long with same value
+        else:
+            n = custom_depths
         block = BasicBlock
         # 1st conv before any network block
         self.conv1 = conv_layer(
@@ -96,16 +110,16 @@ class WideResNet(nn.Module):
         )
         # 1st block
         self.block1 = NetworkBlock(
-            n, act_fn, nChannels[0], nChannels[1], block, conv_layer, 1, dropRate
+            n[0], act_fn, nChannels[0], nChannels[1], block, conv_layer, 1, dropRate
         )
 
         # 2nd block
         self.block2 = NetworkBlock(
-            n, act_fn, nChannels[1], nChannels[2], block, conv_layer, 2, dropRate
+            n[1], act_fn, nChannels[1], nChannels[2], block, conv_layer, 2, dropRate
         )
         # 3rd block
         self.block3 = NetworkBlock(
-            n, act_fn, nChannels[2], nChannels[3], block, conv_layer, 2, dropRate
+            n[2], act_fn, nChannels[2], nChannels[3], block, conv_layer, 2, dropRate
         )
         # global average pooling and classifier
         self.bn1 = nn.BatchNorm2d(nChannels[3])

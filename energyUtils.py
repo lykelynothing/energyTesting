@@ -109,8 +109,8 @@ def test_pgd_impact(steps : List[int],
         bar = '#' * int(((batch + 1) / (len(dataloader))) * 20)
         print(f"\r| {model_name} | Current steps: {steps[i]} [{bar}] {( (batch + 1) / len(dataloader) ) * 100:.1f}% | Est. Time{(time_est * len(dataloader))/ 60: .2f} min" 
               + f"| Elapsed {(time_prev - start_time) / 60 : .2f} min | Adv Acc: {(acc_adv / ((batch+1) * dataloader.batch_size)) * 100:.2f}%" 
-              + f"| Correct : {acc_adv} | Delta : {delta / ( (batch + 1) * dataloader.batch_size) :.4f} | Mean : {mean_en / ( (batch + 1) * dataloader.batch_size)}"
-              + f"\nMean Normal : {en_x/ ( (batch + 1) * dataloader.batch_size)} | Normal xy : {en_xy / ( (batch + 1) * dataloader.batch_size)}"
+              + f"| Correct : {acc_adv} | Delta : {delta / ( (batch + 1) * dataloader.batch_size) :.4f} | Mean : {mean_en / ( (batch + 1) * dataloader.batch_size) : .3f}"
+              + f"\nMean Normal : {en_x/ ( (batch + 1) * dataloader.batch_size) : .3f} | Normal xy : {en_xy / ( (batch + 1) * dataloader.batch_size) : .3f}"
         , flush=True, end='')
 
       # change filepath accordingly
