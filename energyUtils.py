@@ -66,6 +66,7 @@ def test_pgd_impact(steps : List[int],
       acc_adv = 0
       mean_en = 0
       delta = 0
+      delta_xy = 0
       mean_xy = 0    
 
       attack = PGD(model, steps=steps[i])
@@ -89,14 +90,16 @@ def test_pgd_impact(steps : List[int],
         # compute mean energy of normal and adversarial logits and take  
         # their difference, accumulate and divide later
         delta += en_x - adv_en_x
-        
+
         # Accumulate all energy values and divide at the end
         mean_en += adv_en_x
 
         # Compute mean xy energy
         en_xy = (sum(compute_energyxy(pred, y).detach().cpu().numpy()))
         adv_en_xy = (sum(compute_energyxy(pred_adv, y).detach().cpu().numpy()))
+        
         mean_xy += adv_en_xy 
+        delta_xy += en_xy - adv_en_xy
 
         predicted_labels = torch.argmax(pred_adv, dim=1)
         matches = (y == predicted_labels)
@@ -125,6 +128,7 @@ def test_pgd_impact(steps : List[int],
         file.write(f"Mean xy: {mean_xy / (len(dataloader) * dataloader.batch_size)}\n")
         file.write(f"Mean Normal Energy : {en_x / (len(dataloader) * dataloader.batch_size)}\n")
         file.write(f"Mean Normal E xy : {en_xy / (len(dataloader) * dataloader.batch_size)}\n")
+        file.write(f"Delta xy : {delta_xy / (len(dataloader) * dataloader.batch_size)}\n")
         print('\n| * Saved values locally to ',  f"{path}/{model_name}_{model_rob}.txt")
 
       del attack
