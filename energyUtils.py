@@ -209,7 +209,7 @@ def parseTxt(means_path, lines, end):
                             xy = float(line.split(':')[1].strip())
                             mean_xy.append(xy)
                         elif 'Delta xy' in line:
-                            delta_xy = float(line.split(':'[1].strip()))
+                            delta_xy = float(line.split(':')[1].strip())
                             mean_delta_xy.append(delta_xy)
             dict[name] = [means, acc, mean_delta, mean_xy, mean_delta_xy]
     return dict
