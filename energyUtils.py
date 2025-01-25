@@ -190,6 +190,7 @@ def parseTxt(means_path, lines, end):
             acc = []
             mean_delta = []
             mean_xy = []
+            mean_delta_xy = []
             filepath = os.path.join(means_path, filename)
             with open(filepath, 'r') as f:
                 for i, line in enumerate(f):
@@ -207,7 +208,10 @@ def parseTxt(means_path, lines, end):
                         elif 'Mean xy' in line:
                             xy = float(line.split(':')[1].strip())
                             mean_xy.append(xy)
-            dict[name] = [means, acc, mean_delta, mean_xy]
+                        elif 'Delta xy' in line:
+                            delta_xy = float(line.split(':'[1].strip()))
+                            mean_delta_xy.append(delta_xy)
+            dict[name] = [means, acc, mean_delta, mean_xy, mean_delta_xy]
     return dict
 
 # standard energy
