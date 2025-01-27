@@ -1,4 +1,5 @@
 import torch
+import subprocess
 import os
 import time
 import numpy as np
@@ -134,7 +135,7 @@ def test_pgd_impact(steps : List[int],
         print('\n| * Saved values locally to ',  f"{path}/{model_name}_{model_rob}.txt")
 
       del attack
-
+    print(git_update())
     return
 
 def rand_weights(model, inplace : bool = True, track : bool = True):
@@ -227,3 +228,27 @@ def compute_energyxy(logits, labels):
 	energy = -correct_logits
 	return energy
 
+def git_update():
+    try:
+        os.chdir('./energyTesting')
+        subprocess.run(['git', 'status'], check=True, capture_output=True)
+
+        git_status = subprocess.run(
+            ["git", "status", "--porcelain", './means'],
+            check=True,
+            stdout=subprocess.PIPE
+        )
+        changes = git_status.stdout.decode("utf-8").strip()
+
+        if not changes:
+            return f"No changes detected in folder ./means"
+
+        subprocess.run(['git', 'add', './means'], check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '-m', 'Updated means'], check=True, capture_output=True)
+        res = subprocess.run(['git', 'push'], check=True, capture_output=True)
+        return res.stdout.decode('utf-8')
+
+    except subprocess.CalledProcessError as e:
+        return f"Git error: {e.stderr.decode('utf-8')}" if e.stderr else str(e) 
+    except Exception as e:
+         return f"Error: {str(e)}"
