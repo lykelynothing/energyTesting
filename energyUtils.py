@@ -230,7 +230,6 @@ def compute_energyxy(logits, labels):
 
 def git_update():
     try:
-        os.chdir('./energyTesting')
         subprocess.run(['git', 'status'], check=True, capture_output=True)
 
         git_status = subprocess.run(
