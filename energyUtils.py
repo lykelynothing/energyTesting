@@ -135,7 +135,6 @@ def test_pgd_impact(steps : List[int],
         print('\n| * Saved values locally to ',  f"{path}/{model_name}_{model_rob}.txt")
 
       del attack
-    print(git_update())
     return
 
 def rand_weights(model, inplace : bool = True, track : bool = True):
@@ -251,3 +250,18 @@ def git_update():
         return f"Git error: {e.stderr.decode('utf-8')}" if e.stderr else str(e) 
     except Exception as e:
          return f"Error: {str(e)}"
+    
+def fit_image(model, image, y):
+    opt = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    loss_fn = torch.nn.CrossEntropyLoss()
+    running_loss = 0
+    for i in range(500):
+        opt.zero_grad()
+        out = model(image)
+        loss = loss_fn(out, y)
+        running_loss += loss.item()
+        loss.backward()
+        opt.step()
+        if i % 50 == 0:
+            print(f"Current loss {running_loss / i : .3f}")
+
