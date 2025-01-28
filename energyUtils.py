@@ -262,6 +262,6 @@ def fit_image(model, image, y):
         running_loss += loss.item()
         loss.backward()
         opt.step()
-        if i % 50 == 0:
+        if (i+1) % 50 == 0:
             print(f"Current loss {running_loss / i : .3f}")
 
