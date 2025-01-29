@@ -1,0 +1,8 @@
+
+Steps 20 mean_en : -1.4123292
+Adversarial accuracy: 1.10%
+Mean delta: -0.008608628995716572
+Mean xy: -0.3581293821334839
+Mean Normal Energy : -0.045767705887556076
+Mean Normal E xy : -0.01651601679623127
+Delta xy : -0.022618688642978668
