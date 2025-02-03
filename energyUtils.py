@@ -251,11 +251,11 @@ def git_update():
     except Exception as e:
          return f"Error: {str(e)}"
     
-def fit_image(model, image, y):
+def fit_image(model, image, y, n=500):
     opt = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     loss_fn = torch.nn.CrossEntropyLoss()
     running_loss = 0
-    for i in range(500):
+    for i in range(n):
         opt.zero_grad()
         out = model(image)
         loss = loss_fn(out, y)
@@ -263,5 +263,5 @@ def fit_image(model, image, y):
         loss.backward()
         opt.step()
         if (i+1) % 50 == 0:
-            print(f"Current loss {running_loss / i : .3f}")
+            print(f"Current loss : {running_loss / i : .3f}")
 
