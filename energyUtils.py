@@ -216,6 +216,46 @@ def parseTxt(means_path, lines, end):
             dict[name] = [means, acc, mean_delta, mean_xy, mean_delta_xy]
     return dict
 
+# like parseTxt but only reads mean delta E(x, y)
+def parseTxtXY(path):
+    means = {}
+    for filename in os.listdir(path):
+        if filename.endswith('.txt'):
+            mean_delta_xy = []
+            filepath = os.path.join(path, filename)
+            with open(filepath, 'r') as f:
+                for line in f:
+                    if 'Delta xy' in line:
+                        delta_xy = float(line.split(':')[1].strip())
+                        mean_delta_xy.append(delta_xy)
+            means[filename] = mean_delta_xy
+    return means
+
+# takes a folder containing the results of multiple tests
+# accumulates values of delta E(x, y) for each corresponding pgd step
+def parseAll(path):
+    tot_means = {}
+    counter = 0 # to count number of trials
+    # initializes dict with correct names as keys
+    for name in os.listdir(os.path.join(path, os.listdir(path)[0])):
+        tot_means[name] = [0, 0, 0, 0, 0] # update this so that it's long as many pgd steps as tested
+
+    for dirname in os.listdir(path):
+        print(f"Checking {dirname}")
+        if os.path.isdir(os.path.join(path, dirname)):
+            counter += 1
+            dir = os.path.join(path, dirname)
+            res = parseTxtXY(dir)
+            # res contains dict with key = model and value = list of values for each pgd step
+            for model in res:
+                # for each model iterate over its list of values
+                for i in range(len(res[model])):
+                    # accumulate each value in corresponding list in bigger dict
+                    tot_means[model][i] += res[model][i]
+    for model in tot_means:
+        tot_means[model]  = np.array(tot_means[model]) / counter
+    return tot_means
+
 # standard energy
 def compute_energy(logits):
 	energy = -torch.logsumexp(logits, dim=1)
