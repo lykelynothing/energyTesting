@@ -1,0 +1,40 @@
+
+Steps 1 mean_en : -1.261383
+Adversarial accuracy: 1.00%
+Mean delta: 0.003091924823820591
+Mean xy: -0.1618483066558838
+Mean Normal Energy : -0.041669026017189026
+Mean Normal E xy : -0.005620943382382393
+Delta xy : -0.08228830993175507
+
+Steps 2 mean_en : -1.2577076
+Adversarial accuracy: 0.77%
+Mean delta: 0.007403769996017218
+Mean xy: -0.08633118867874146
+Mean Normal Energy : -0.041316330432891846
+Mean Normal E xy : -0.0074297222308814526
+Delta xy : -0.15581360459327698
+
+Steps 5 mean_en : -1.2796663
+Adversarial accuracy: 0.42%
+Mean delta: 0.02575133927166462
+Mean xy: 0.04305068776011467
+Mean Normal Energy : -0.041869428008794785
+Mean Normal E xy : -0.013026517815887928
+Delta xy : -0.2930057644844055
+
+Steps 10 mean_en : -1.2747679
+Adversarial accuracy: 0.30%
+Mean delta: 0.030458228662610054
+Mean xy: 0.14071844518184662
+Mean Normal Energy : -0.04083002731204033
+Mean Normal E xy : -0.008711720816791058
+Delta xy : -0.33368098735809326
+
+Steps 20 mean_en : -1.2873292
+Adversarial accuracy: 0.34%
+Mean delta: 0.029688170179724693
+Mean xy: 0.0874847024679184
+Mean Normal Energy : -0.040681518614292145
+Mean Normal E xy : -0.010298490524291992
+Delta xy : -0.33315449953079224
