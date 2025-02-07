@@ -232,18 +232,20 @@ def parseTxtXY(path):
     return means
 
 # takes a folder containing the results of multiple tests
-# accumulates values of delta E(x, y) for each corresponding pgd step
-def parseAll(path):
+# accumulates values of mean delta E(x, y) for each corresponding pgd step
+# also computes variance (using n-1 degrees of freedom) of delta E(x, y)
+def parseAll(path : str):
     tot_means = {}
-    counter = 0 # to count number of trials
+    tot_vars = {}
+    trials = 0 # to count number of trials
     # initializes dict with correct names as keys
     for name in os.listdir(os.path.join(path, os.listdir(path)[0])):
         tot_means[name] = [0, 0, 0, 0, 0] # update this so that it's long as many pgd steps as tested
-
+        tot_vars[name] = [0, 0, 0, 0, 0]
     for dirname in os.listdir(path):
         print(f"Checking {dirname}")
         if os.path.isdir(os.path.join(path, dirname)):
-            counter += 1
+            trials += 1
             dir = os.path.join(path, dirname)
             res = parseTxtXY(dir)
             # res contains dict with key = model and value = list of values for each pgd step
@@ -253,8 +255,25 @@ def parseAll(path):
                     # accumulate each value in corresponding list in bigger dict
                     tot_means[model][i] += res[model][i]
     for model in tot_means:
-        tot_means[model]  = np.array(tot_means[model]) / counter
-    return tot_means
+        tot_means[model]  = np.array(tot_means[model]) / trials
+    
+    tot_vars = compute_Var(tot_vars, tot_means, path)
+
+    for model in tot_vars:
+        tot_vars[model] = np.array(tot_vars[model]) / (trials - 1) # n-1 for variance
+
+    return tot_means, tot_vars
+
+# Accumulates variance values
+def compute_Var(tot_vars : dict, tot_means : dict, path : str):
+    for dirname in os.listdir(path):
+        dir = os.path.join(path, dirname)
+        if os.path.isdir(dir):
+            res = parseTxtXY(dir)
+            for model in res:
+                for i in range(len(res[model])):
+                    tot_vars[model][i] += math.pow((res[model][i] - tot_means[model][i]), 2)
+    return tot_vars
 
 # standard energy
 def compute_energy(logits):
