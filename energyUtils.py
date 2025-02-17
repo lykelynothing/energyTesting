@@ -46,11 +46,12 @@ def count_parameters(model):
 def test_pgd_impact(steps : List[int],
                 model : torch.nn.Module, model_name : str, 
                 dataloader : torch.utils.data.DataLoader, dir : str, model_rob: str = '0.0', 
-                device : str = 'cpu', alpha : float = 2/255, eps : float = 8/255) -> None :
+                device : str = 'cpu', alpha : float = 2/255, eps : float = 8/255, n_it = 10) -> None :
     '''
     Takes a list of different steps of PGD to try, a model, a dataloader and
     a list where the mean energies for each kind of PGD step will be stored.
     Now also stores difference between mean normal energy and mean adversarial energy.
+    n_it is the fraction of the dataset that will actually be tested.
     '''
     
     model.loss_fn = torch.nn.CrossEntropyLoss()
@@ -75,7 +76,7 @@ def test_pgd_impact(steps : List[int],
 
       for batch, (X, y) in enumerate(dataloader):
         
-        if batch == len(dataloader)//10:
+        if batch == len(dataloader)// n_it:
             break 
         
         time_prev = time.time()
@@ -112,8 +113,11 @@ def test_pgd_impact(steps : List[int],
         time_est = 0.9 * time_curr + 0.1 * time_est_prev
         time_est_prev = time_est
 
-        bar = '#' * int(((batch + 1) / (len(dataloader) / 10)) * 20)
-        print(f"\r| {model_name} | Current steps: {steps[i]} [{bar}] {( (batch + 1) / (len(dataloader) / 10) ) * 100:.1f}% | Est. Time{(time_est * len(dataloader)/10)/ 60: .2f} min" 
+        tot_samples = len(dataloader) * dataloader.batch_size / n_it
+        progress = (batch + 1) / (len(dataloader) / n_it)
+
+        bar = '#' * int(progress * 20)
+        print(f"\r| {model_name} | Current steps: {steps[i]} [{bar}] {progress * 100:.1f}% | Est. Time{(time_est * len(dataloader)/n_it)/ 60: .2f} min" 
               + f"| Elapsed {(time_prev - start_time) / 60 : .2f} min | Adv Acc: {(acc_adv / ((batch+1) * dataloader.batch_size)) * 100:.2f}%" 
               + f"| Correct : {acc_adv} | Delta : {delta / ( (batch + 1) * dataloader.batch_size) :.4f} | Mean : {mean_en / ( (batch + 1) * dataloader.batch_size) : .3f}"
               + f"\nMean Normal : {en_x/ ( (batch + 1) * dataloader.batch_size) : .3f} | Normal xy : {en_xy / ( (batch + 1) * dataloader.batch_size) : .3f}"
@@ -124,14 +128,14 @@ def test_pgd_impact(steps : List[int],
       path = os.path.join(os.getcwd(), f"means/{dir}")
       with open(f"{path}/{model_name}_{model_rob}.txt", "a") as file:
         file.write(f"\nSteps {steps[i]} mean_en : ")
-        file.write(str(mean_en / (len(dataloader) * dataloader.batch_size)) + '\n')
+        file.write(str(mean_en / tot_samples) + '\n')
 
-        file.write(f"Adversarial accuracy: {100 * acc_adv / (len(dataloader) * dataloader.batch_size) :.2f}%\n")
-        file.write(f"Mean delta: {delta / (len(dataloader) * dataloader.batch_size)}\n")
-        file.write(f"Mean xy: {mean_xy / (len(dataloader) * dataloader.batch_size)}\n")
-        file.write(f"Mean Normal Energy : {en_x / (len(dataloader) * dataloader.batch_size)}\n")
-        file.write(f"Mean Normal E xy : {en_xy / (len(dataloader) * dataloader.batch_size)}\n")
-        file.write(f"Delta xy : {delta_xy / (len(dataloader) * dataloader.batch_size)}\n")
+        file.write(f"Adversarial accuracy: {(100 * acc_adv * n_it) / (len(dataloader) * dataloader.batch_size) :.2f}%\n")
+        file.write(f"Mean delta: {(delta * n_it) / (len(dataloader) * dataloader.batch_size)}\n")
+        file.write(f"Mean xy: {(mean_xy * n_it) / (len(dataloader) * dataloader.batch_size)}\n")
+        file.write(f"Mean Normal Energy : {(en_x * n_it) / (len(dataloader) * dataloader.batch_size)}\n")
+        file.write(f"Mean Normal E xy : {(en_xy * n_it) / (len(dataloader) * dataloader.batch_size)}\n")
+        file.write(f"Delta xy : {(delta_xy * n_it) / (len(dataloader) * dataloader.batch_size)}\n")
         print('\n| * Saved values locally to ',  f"{path}/{model_name}_{model_rob}.txt")
 
       del attack
@@ -260,7 +264,8 @@ def parseAll(path : str):
     tot_vars = compute_Var(tot_vars, tot_means, path)
 
     for model in tot_vars:
-        tot_vars[model] = np.array(tot_vars[model]) / (trials - 1) # n-1 for variance
+        for i in range(len(tot_vars[model])):
+            tot_vars[model][i] = math.sqrt(tot_vars[model][i])
 
     return tot_means, tot_vars
 
