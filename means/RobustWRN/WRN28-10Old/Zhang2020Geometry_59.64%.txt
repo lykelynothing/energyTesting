@@ -1,0 +1,28 @@
+Steps 1 mean_en : -4.847995
+Adversarial accuracy: 60.62%
+Mean delta: -0.36764398217201233
+Mean xy: -3.653503656387329
+
+Steps 2 mean_en : -4.6880107
+Adversarial accuracy: 50.27%
+Mean delta: -0.5276273488998413
+Mean xy: -3.0894370079040527
+
+Steps 5 mean_en : -4.6772537
+Adversarial accuracy: 30.46%
+Mean delta: -0.5383854508399963
+Mean xy: -2.020970582962036
+
+Steps 10 mean_en : -4.916849
+Adversarial accuracy: 23.00%
+Mean delta: -0.2987895607948303
+Mean xy: -1.552078366279602
+
+Steps 20 mean_en : -5.080128
+Adversarial accuracy: 21.01%
+Mean delta: -0.13550758361816406
+Mean xy: -1.4624661207199097
+
+Steps 50 mean_en : -5.161731
+Adversarial accuracy: 20.44%
+Mean delta: -0.053907472640275955

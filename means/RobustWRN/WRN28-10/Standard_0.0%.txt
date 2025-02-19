@@ -1,29 +1,48 @@
-Steps 1 mean_en : -9.649833
-Adversarial accuracy: 5.61%
-Mean delta: 2.3761186599731445
-Mean xy: 0.6712848544120789
 
-Steps 2 mean_en : -12.004846
-Adversarial accuracy: 2.42%
-Mean delta: 4.731135845184326
-Mean xy: 1.5689018964767456
+Steps 1 mean_en : -9.666466
+Adversarial accuracy: 5.69%
+Mean delta: 2.442763566970825
+Mean xy: 0.7851619124412537
+Mean Normal Energy : -0.2344169020652771
+Mean Normal E xy : -0.02623102255165577
+Delta xy : -2.4450244903564453
 
-Steps 5 mean_en : -15.967808
-Adversarial accuracy: 0.85%
-Mean delta: 8.69409465789795
-Mean xy: 2.8700997829437256
+Steps 2 mean_en : -11.875388
+Adversarial accuracy: 2.60%
+Mean delta: 4.673320293426514
+Mean xy: 1.6942294836044312
+Mean Normal Energy : -0.24312981963157654
+Mean Normal E xy : -0.06716632843017578
+Delta xy : -3.2672786712646484
 
-Steps 10 mean_en : -18.143003
-Adversarial accuracy: 0.50%
-Mean delta: 10.869298934936523
-Mean xy: 3.5184996128082275
+Steps 5 mean_en : -15.947177
+Adversarial accuracy: 1.10%
+Mean delta: 8.671435356140137
+Mean xy: 2.929056406021118
+Mean Normal Energy : -0.23197096586227417
+Mean Normal E xy : -0.03884367644786835
+Delta xy : -4.64642333984375
 
-Steps 20 mean_en : -19.13546
-Adversarial accuracy: 0.43%
-Mean delta: 11.861748695373535
-Mean xy: 3.829228639602661
+Steps 10 mean_en : -17.894129
+Adversarial accuracy: 0.40%
+Mean delta: 10.679600715637207
+Mean xy: 3.599968194961548
+Mean Normal Energy : -0.23885928094387054
+Mean Normal E xy : -0.057332925498485565
+Delta xy : -5.313546657562256
 
-Steps 50 mean_en : -19.753117
-Adversarial accuracy: 0.35%
-Mean delta: 12.479408264160156
+Steps 20 mean_en : -19.185856
+Adversarial accuracy: 0.60%
+Mean delta: 11.927008628845215
+Mean xy: 3.7694857120513916
+Mean Normal Energy : -0.25770094990730286
+Mean Normal E xy : -0.06547464430332184
+Delta xy : -5.638671398162842
 
+Steps 50 mean_en : -19.728804
+Adversarial accuracy: 0.40%
+Mean delta: 12.47191333770752
+Mean xy: 3.9156291484832764
+Mean Normal Energy : -0.2363668829202652
+Mean Normal E xy : -0.10873667895793915
+Delta xy : -5.739439487457275
