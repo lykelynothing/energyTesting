@@ -180,7 +180,7 @@ def parseTxt(means_path, lines, end):
     '''
     Parses all txt files contained in means_path, creates a model where each
     key is the model of a .txt file and its value is a list of lists where
-    dict[model] = [[mean_en], [adv_acc], [mean_delta]]
+    dict[model] = [means, acc, mean_delta, mean_xy, mean_delta_xy]
     
     Lines: controls how many initial lines of the .txt to skip when reading
 
