@@ -155,18 +155,20 @@ def rand_weights(model, inplace : bool = True, track : bool = True):
                         torch.nn.init.ones_(param.data)
                     elif 'bias' in name:  # Beta
                         torch.nn.init.zeros_(param.data)
-                    if not track: # index modules dict to find right module and change its flag
+                    if not track: # Set flag of bn to not use stored stats
                         module.track_running_stats = False
-                elif 'downsample' in name.lower(): # some custom wrns have this
-                    if '1' in name.lower():
+                elif 'downsample' in n.lower(): # some custom wrns have this
+                    if '1' in n.lower(): # if 1 is in name it's a BatchNorm
                         if 'bias' in name.lower():
                             torch.nn.init.zeros_(param.data)
                         else:
                             torch.nn.init.ones_(param.data)
+                    elif '0' in n.lower():
+                        torch.nn.init.kaiming_normal_(param.data, mode='fan_in', nonlinearity='relu')
                     else:
-                        torch.nn.init.normal_(param.data)
-                        #torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')
+                        print("No param condition: ", name, n) # To check if some parameters weren't caught
                 elif 'weight' in name.lower() and 'fc' in n or 'linear' in n or 'logits' in n:
+                    #torch.nn.init.kaiming_normal_(param.data, mode='fan_in', nonlinearity='relu')
                     torch.nn.init.normal_(param.data, mean=0.0, std=1)
                 else:
                     print("No param condition: ", name, n) # To check if some parameters weren't caught
@@ -235,39 +237,56 @@ def parseTxtXY(path):
             means[filename] = mean_delta_xy
     return means
 
-# takes a folder containing the results of multiple tests
-# accumulates values of mean delta E(x, y) for each corresponding pgd step
-# also computes variance (using n-1 degrees of freedom) of delta E(x, y)
+'''
+ Takes a folder containing the results of multiple tests
+ accumulates values of mean delta E(x, y), delta E(x), mean E(x) for each 
+ corresponding pgd step.
+ also computes variance (using n-1 degrees of freedom) of delta E(x, y)
+'''
 def parseAll(path : str):
     tot_means = {}
+    tot_deltas_x = {}
+    tot_deltas_xy = {}
     tot_vars = {}
+    tot_means_xy = {}
     trials = 0 # to count number of trials
+    i = 6 # number of pgd steps
     # initializes dict with correct names as keys
     for name in os.listdir(os.path.join(path, os.listdir(path)[0])):
-        tot_means[name] = [0, 0, 0, 0, 0] # update this so that it's long as many pgd steps as tested
-        tot_vars[name] = [0, 0, 0, 0, 0]
+        tot_deltas_xy[name] = np.array([0.0] * i) # update this so that it's long as many pgd steps as tested
+        tot_vars[name] = np.array([0.0] * i)
+        tot_means[name] = np.array([0.0] * i)
+        tot_deltas_x[name] = np.array([0.0] * i)
+        tot_means_xy[name] = np.array([0.0] * i)
     for dirname in os.listdir(path):
         print(f"Checking {dirname}")
+        # Visits each trial subfolder, accumulates values from it in tot_mean
         if os.path.isdir(os.path.join(path, dirname)):
             trials += 1
             dir = os.path.join(path, dirname)
-            res = parseTxtXY(dir)
+            res = parseTxt(dir, 0, '')
             # res contains dict with key = model and value = list of values for each pgd step
             for model in res:
-                # for each model iterate over its list of values
-                for i in range(len(res[model])):
-                    # accumulate each value in corresponding list in bigger dict
-                    tot_means[model][i] += res[model][i]
-    for model in tot_means:
-        tot_means[model]  = np.array(tot_means[model]) / trials
-    
-    tot_vars = compute_Var(tot_vars, tot_means, path)
+                # for each model iterate over its lists of lists of values
+                tot_means[model] += np.array(res[model][0])
+                tot_deltas_xy[model] += np.array(res[model][4])
+                tot_deltas_x[model] += np.array(res[model][2])
+                tot_means_xy[model] += np.array(res[model][3])
+    # Then divides by number of trials
+    for model in tot_deltas_xy:
+        tot_deltas_xy[model]  = tot_deltas_xy[model] / trials # can be done because it's an np array
+        tot_deltas_x[model] = tot_deltas_x[model] / trials
+        tot_means[model] = tot_means[model] / trials
+        tot_means_xy[model] = tot_means_xy[model] / trials
+    # Vars must be computed afterwards since we need exact means first
+    tot_vars = compute_Var(tot_vars, tot_deltas_xy, path)
 
+    # Compute std from vars
     for model in tot_vars:
         for i in range(len(tot_vars[model])):
             tot_vars[model][i] = math.sqrt(tot_vars[model][i])
 
-    return tot_means, tot_vars
+    return tot_means, tot_vars, tot_deltas_xy, tot_deltas_x, tot_means_xy
 
 # Accumulates variance values
 def compute_Var(tot_vars : dict, tot_means : dict, path : str):
