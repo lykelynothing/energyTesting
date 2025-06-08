@@ -234,6 +234,8 @@ def parseTxtXY(path):
                     if 'Delta xy' in line:
                         delta_xy = float(line.split(':')[1].strip())
                         mean_delta_xy.append(delta_xy)
+            if '_0.0.txt' in filename:
+                filename = filename.replace('_0.0.txt', '')
             means[filename] = mean_delta_xy
     return means
 
@@ -243,7 +245,15 @@ def parseTxtXY(path):
  corresponding pgd step.
  also computes variance (using n-1 degrees of freedom) of delta E(x, y)
 '''
-def parseAll(path : str):
+def parseAll(path : str) -> tuple:
+    '''
+    :return:
+        - tot_means 
+        - tot_vars 
+        - tot_deltas_xy
+        - tot_deltas_x
+        - tot_means_xy
+    '''
     tot_means = {}
     tot_deltas_x = {}
     tot_deltas_xy = {}
@@ -253,6 +263,7 @@ def parseAll(path : str):
     i = 6 # number of pgd steps
     # initializes dict with correct names as keys
     for name in os.listdir(os.path.join(path, os.listdir(path)[0])):
+        name = name.replace('_0.0.txt', '') # will surely create problems
         tot_deltas_xy[name] = np.array([0.0] * i) # update this so that it's long as many pgd steps as tested
         tot_vars[name] = np.array([0.0] * i)
         tot_means[name] = np.array([0.0] * i)
@@ -264,7 +275,7 @@ def parseAll(path : str):
         if os.path.isdir(os.path.join(path, dirname)):
             trials += 1
             dir = os.path.join(path, dirname)
-            res = parseTxt(dir, 0, '')
+            res = parseTxt(dir, 0, '_0.0.txt')
             # res contains dict with key = model and value = list of values for each pgd step
             for model in res:
                 # for each model iterate over its lists of lists of values
@@ -348,3 +359,21 @@ def fit_image(model, image, y, n=500):
         if (i+1) % 50 == 0:
             print(f"Current loss : {running_loss / i : .3f}")
 
+def collect_norms(model, norm : str = 'infty') -> list:
+    """
+    Computes specified norm of weight matrices for all layers of model
+    and collects them in a list.
+
+    Args:
+        model : pytorch model
+        norm (str) : norm to use
+    
+    Returns:
+        norms (list[float]) : list of norms for each weight matrix
+
+    """
+    norms = []
+
+
+
+    return norms

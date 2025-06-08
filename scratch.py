@@ -1,44 +1,21 @@
-import torch
 import torch.nn as nn
+import torchvision.transforms as transforms
+import matplotlib.pyplot as plt
 from robustbench import load_model
-from CustomWRN.wrn_cifar import wrn_28_10, wrn_34_10
 from energyUtils import rand_weights, compute_energy
-from torchsummary import summary
-import warnings
-warnings.filterwarnings("ignore")
-
-# Before going into conv1 of first block of second stage, something happens in std (probably shortcut)
-
-x = torch.rand(3, 32, 32)
-
-outputs = {}
-
-def hook_fn(module, input, output):
-    outputs[module] = input[0], output[0]
+from PIL import Image
+from CustomWRN.wrn_cifar import wrn_28_10, WideResNet
 
 
-model = wrn_28_10(nn.Conv2d, nn.Linear, nn.SiLU, 'kaiming_normal', dropRate=0)
-model.train()
-rand_weights(model, inplace=False, track=False)
-# check out second block first stage
-for block in list(model.children())[1:-3]:
-   block.layer[3].conv2.register_forward_hook(hook_fn)
+models = {
+        '9-9-5_10-10-10_ReLU' : [nn.ReLU, [9, 9, 5], [10, 10, 10]],
+        '5-1-7_10-10-10_ReLU' : [nn.ReLU, [5, 1, 7], [10, 10, 10]],
+        '1-3-7_10-10-10_ReLU' : [nn.ReLU, [1, 3, 7], [10, 10, 10]],
+        '1-1-7_10-10-10_ReLU' : [nn.ReLU, [1, 1, 7], [10, 10, 10]]
+    }
 
-# Print mean of outputs and of inner layers outputs
-print('Custom outputs: ', compute_energy(model((torch.unsqueeze(x, 0)))).item())
-
-print('Inner inputs 4th block first stage: ', [torch.mean(outputs[t][0]).item() for t in outputs.keys()])
-
-# Same for standard
-outputs = {}
-
-model = load_model('Standard', dataset='cifar10', threat_model='Linf')
-model.train()
-rand_weights(model, inplace=False, track=False)
-
-for block in list(model.children())[1:-3]: # Ignores first and last conv and bn
-    block.layer[0].conv2.register_forward_hook(hook_fn)
-
-print('Standard: ', compute_energy(model((torch.unsqueeze(x, 0)))).item())
-
-print('Inner inputs ith block first stage: ', [torch.mean(outputs[t][0]).item() for t in outputs.keys()])
+model_name = '9-9-5_10-10-10_ReLU'
+model = WideResNet(nn.Conv2d, nn.Linear, act_fn=models[model_name][0], custom_depths=models[model_name][1], custom_widen_factor=models[model_name][2], dropRate=0)
+for n, module in model.named_modules():
+    if 'conv' in n.lower():
+        print(module.weight.data.shape)
