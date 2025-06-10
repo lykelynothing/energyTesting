@@ -4,8 +4,9 @@ import os
 import time
 import numpy as np
 import math
+import torch.linalg as la
 from torch.nn.utils import prune
-from torch.utils.data import dataloader, Dataset
+from torch.utils.data import Dataset, DataLoader
 from typing import List
 from torchattacks import PGD
 from PIL import Image
@@ -359,13 +360,14 @@ def fit_image(model, image, y, n=500):
         if (i+1) % 50 == 0:
             print(f"Current loss : {running_loss / i : .3f}")
 
-def collect_norms(model, norm : str = 'infty') -> list:
+def collect_norms(model : torch.nn.Module, norm : str = 'infty') -> list:
     """
     Computes specified norm of weight matrices for all layers of model
     and collects them in a list.
 
     Args:
-        model : pytorch model
+        model (torch.nn.Module): pytorch model
+
         norm (str) : norm to use
     
     Returns:
@@ -377,3 +379,42 @@ def collect_norms(model, norm : str = 'infty') -> list:
 
 
     return norms
+
+def collect_z_norms(model : torch.nn.Module, dataloader : DataLoader, norm = float('inf'), n_it : int = 10) -> float :
+    """
+    Computes average specified norm of logits of model over
+    a dataset contained in dataloader
+
+    Args:
+        model (torch.nn.Module) : pytorch model
+
+        dataloader (DataLoader) : torch data loader
+
+        norm : norm to use on logits
+
+        n_it (int) : number of batches to process
+    Returns:
+        mean_norm (float) : mean specified norm over whole dataset
+
+    """
+
+    model.eval()
+    
+    current_norm = 0.0
+
+    with torch.no_grad():
+        for batch, (X, _) in enumerate(dataloader):
+            if batch == n_it:
+                break
+
+            pred = model(X)
+            # Compute mean per batch
+            batch_norm = torch.mean(la.vector_norm(pred, ord=norm, dim=(-1)))
+            current_norm += batch_norm
+            
+            if batch % 5 == 0:
+                print(f'Currently at batch {batch}')
+
+    mean_norm = (current_norm) / (n_it)
+
+    return mean_norm
