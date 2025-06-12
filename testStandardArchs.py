@@ -1,12 +1,14 @@
 import torch
 import torch.nn as nn
+import matplotlib.pyplot as plt
 import os
 import torchvision.transforms as transforms
+from time import time
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
-from energyUtils import test_pgd_impact, rand_weights
+from energyUtils import test_pgd_impact, rand_weights, git_update, fit_image
 from robustbench.utils import load_model
-from CustomWRN.wrn_cifar import wrn_28_10
+from CustomWRN.wrn_cifar import wrn_28_10, WideResNet
 
 os.makedirs(os.path.join(os.getcwd(), 'means'), exist_ok=True)
 os.environ['TORCH_HOME'] = 'E:\\torch\\cache\\checkpoints'
@@ -21,42 +23,39 @@ preprocess = transforms.Compose([
 ])
 
 dataset = CIFAR10('./data', train=False, download=True, transform=preprocess)
+x, y_i = dataset[0]
+y = torch.tensor(y_i)
+x = x.unsqueeze(0)
+y = y.unsqueeze(0)
+x = x.to(device)
+y = y.to(device)
 dataloader = DataLoader(dataset, batch_size=32, shuffle=True, pin_memory=True)
 
-# Resnets
-model_numbers = ['20', '32', '44', '56']
+models = {
+        '9-9-5_10-10-10_ReLU' : [nn.ReLU, [9, 9, 5], [10, 10, 10]],
+        '5-1-7_10-10-10_ReLU' : [nn.ReLU, [5, 1, 7], [10, 10, 10]],
+        '1-3-7_10-10-10_ReLU' : [nn.ReLU, [1, 3, 7], [10, 10, 10]],
+        '1-1-7_10-10-10_ReLU' : [nn.ReLU, [1, 1, 7], [10, 10, 10]]
+    }
 
-# WRN 28-10
-models = {'Standard' : '0.0%', 'Sehwag2020Hydra' : '57.14%', 'Wang2020Improving' : '56.29%', 'Zhang2020Geometry' : '59.64%',
-              'Gowal2020Uncovering_28_10_extra' : '62.76%', 'Wang2023Better_WRN-28-10' : '67.31%', 'Cui2023Decoupled_WRN-28-10' : '67.74%'}
+for i in range(10):
+    torch.manual_seed(i)
 
-'''
-# WRN 34-10
-models = {'Zhang2019You' : '44.83%', 'Zhang2020Attacks' : '53.51%', 'Sehwag2021Proxy' : '60.27%', 'Wu2020Adversarial' : '56.17%', 
-            'Chen2024Data_WRN_34_10' : '57.30%', 'Addepalli2021Towards_WRN34' : '58.04%', 
-            'Rade2021Helper_extra' : '62.83%', 'Huang2020Self' : '53.34%', 'Sitawarin2020Improving' : '50.72%', 
-            'Chen2020Efficient' : '51.12%', 'Cui2020Learnable_34_10' : '52.86%', 'Chen2021LTD_WRN34_10' : '56.94%'}
-'''
-'''
-#models = {'Sitawarin2020Improving' : '50.72%', 'Chen2020Efficient' : '51.12%',
-           'Cui2020Learnable_34_10' : '52.86%', 'Chen2021LTD_WRN34_10' : '56.94%'}
+    start = time()
 
-#models = {'Chen2020Efficient' : '51.12%', 'Cui2020Learnable_34_10' : '52.86%'}
-'''
+    for model_name in models:
+        #model_name = f"Resnet{model_numb}"
+        #model = torch.hub.load("chenyaofo/pytorch-cifar-models", f"cifar10_resnet{model_numb}", pretrained=True, trust_repo=True)
+        #model = load_model(model_name, dataset='cifar10', threat_model='Linf')
+        model = WideResNet(nn.Conv2d, nn.Linear, act_fn=models[model_name][0], custom_depths=models[model_name][1], custom_widen_factor=models[model_name][2], dropRate=0)
+        model.train()
+        model.to(device)
+        rand_weights(model, False, False)
+        print(f'Testing {model_name}')
+        #fit_image(model, x, y)
+        test_pgd_impact([1, 2, 5, 10, 20], model, model_name, dataloader, f'RandCustom/RandDepths55M/CustomWRNRandSameParams{i}_40M', device=device, alpha=2/255, eps=8/255)
+        del model
+    end = time()
 
-# 28-10 with different act fns (ReLU, SiLU and Swift)
-models = {'Standard' : '0.0%', 'Gowal2020Uncovering_28_10_extra' : '62.76%', 'Wang2023Better_WRN-28-10' : '67.31%', 'Cui2023Decoupled_WRN-28-10' : '67.74%'}
-
-#models = {'WRN28-10ReLU' : nn.ReLU, 'WRN28-10SiLU' : nn.SiLU} 
-
-for model_name in models:
-    #model_name = f"Resnet{model_numb}"
-    #model = torch.hub.load("chenyaofo/pytorch-cifar-models", f"cifar10_resnet{model_numb}", pretrained=True, trust_repo=True)
-    model = load_model(model_name, dataset='cifar10', threat_model='Linf')
-    #model = wrn_28_10(nn.Conv2d, nn.Linear, models[model_name], 'kaiming_normal', dropRate=0)
-    model.train()
-    model.to(device)
-    rand_weights(model)
-    print(f'Testing {model_name}')
-    test_pgd_impact([1, 2, 4, 5, 10, 20], model, model_name, dataloader, 'WRN28-10RandMeaningful2', model_rob=models[model_name], device=device, alpha=2/255, eps=8/255)
-    del model
+    print(f"Test suite took {(end - start) / 60 : .2f} minutes")
+    print(git_update())
