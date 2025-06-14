@@ -1,4 +1,5 @@
 import torch
+import csv
 import subprocess
 import os
 import time
@@ -93,7 +94,7 @@ def test_pgd_impact(steps : List[int],
         adv_en_x = sum(compute_energy(pred_adv).detach().cpu().numpy())
 
         # compute mean energy of normal and adversarial logits and take  
-        # their difference, accumulate and divide later
+       # their difference, accumulate and divide later
         delta += en_x - adv_en_x
 
         # Accumulate all energy values and divide at the end
@@ -380,7 +381,8 @@ def collect_norms(model : torch.nn.Module, norm : str = 'infty') -> list:
 
     return norms
 
-def collect_z_norms(model : torch.nn.Module, dataloader : DataLoader, norm = float('inf'), n_it : int = 10) -> float :
+def collect_z_norms(model : torch.nn.Module, dataloader : DataLoader, norm = float('inf'), n_it : int = 10, 
+                    device : str = 'cpu') -> float :
     """
     Computes average specified norm of logits of model over
     a dataset contained in dataloader
@@ -406,15 +408,28 @@ def collect_z_norms(model : torch.nn.Module, dataloader : DataLoader, norm = flo
         for batch, (X, _) in enumerate(dataloader):
             if batch == n_it:
                 break
-
+            
+            X = X.to(device)
             pred = model(X)
             # Compute mean per batch
-            batch_norm = torch.mean(la.vector_norm(pred, ord=norm, dim=(-1)))
+            batch_norm = torch.mean(la.vector_norm(pred, ord=norm, dim=(-1))).detach()
             current_norm += batch_norm
             
-            if batch % 5 == 0:
+            if batch % (n_it // 4) == 0:
                 print(f'Currently at batch {batch}')
 
     mean_norm = (current_norm) / (n_it)
 
     return mean_norm
+
+def save_z_norms(path, data):
+
+    fieldnames = ['model', 'logit_norm'] 
+    os.makedirs(f"./logit_norms/{path}", exist_ok=True)
+    path = os.path.join(os.getcwd(), f"./logit_norms/{path}/logits.csv")
+    with open(path, mode='a') as file: # add exact path
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        if not os.path.isfile(path) or os.path.getsize(path) == 0:
+            writer.writeheader()
+        writer.writerow(data) 
+    return
