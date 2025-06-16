@@ -149,7 +149,7 @@ def rand_weights(model, inplace : bool = True, track : bool = True):
             if param.requires_grad:
                 if 'conv' in n.lower() or 'shortcut' in n.lower() and 'weight' in name:  # Check if conv
                     #torch.nn.init.normal_(param.data)
-                    torch.nn.init.kaiming_normal_(param.data, mode='fan_in', nonlinearity='relu')  
+                    torch.nn.init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')  
                 elif 'bias' in name:  # For bias parameters
                     torch.nn.init.constant_(param.data, 0.0)
                 elif 'bn' in n.lower() or 'batchnorm' in n.lower():  # BatchNorm layer
@@ -171,7 +171,7 @@ def rand_weights(model, inplace : bool = True, track : bool = True):
                         print("No param condition: ", name, n) # To check if some parameters weren't caught
                 elif 'weight' in name.lower() and 'fc' in n or 'linear' in n or 'logits' in n:
                     #torch.nn.init.kaiming_normal_(param.data, mode='fan_in', nonlinearity='relu')
-                    torch.nn.init.normal_(param.data, mean=0.0, std=1)
+                    torch.nn.init.normal_(param.data, mean=0.0, std=0.001)
                 else:
                     print("No param condition: ", name, n) # To check if some parameters weren't caught
             else:
