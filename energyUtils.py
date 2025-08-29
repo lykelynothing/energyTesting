@@ -143,6 +143,14 @@ def test_pgd_impact(steps : List[int],
       del attack
     return
 
+def extract_kernels(model):
+    kernels = []
+    for n, module in model.named_modules():
+        for name, param in module.named_parameters(recurse=False):
+            if 'conv' in n.lower() or 'shortcut' in n.lower() and 'weight' in name:
+                kernels.append(param.data)
+    return kernels
+
 def rand_weights(model, inplace : bool = True, track : bool = True):
     for n, module in model.named_modules(): 
         for name, param in module.named_parameters(recurse=False):
