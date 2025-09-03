@@ -143,6 +143,24 @@ def test_pgd_impact(steps : List[int],
       del attack
     return
 
+def save_pgt_csv(data, path):
+    '''
+    Saves results of test_pgd_impact on a csv file
+    Add Model name in fields!!
+    Also specify how folders will be named and organized
+    '''
+    fieldnames = ['Adversarial accuracy', 'Mean delta', 'Mean xy', 'Mean normal energy'
+                  'Mean normal xy', 'Delta xy']
+    os.makedirs(f"./pgd_impact/{path}", exist_ok=True)
+    path = os.path.join(os.getcwd(), f"./pgd_impact/{path}/means")
+    with open(path, mode='a') as f:
+        writer = csv.DictWriter(f, fieldnames)
+        if not os.path.isfile(path) or os.path.getsize(path) == 0:
+            writer.writeheader()
+        writer.writerow(data)
+    return
+
+
 def extract_kernels(model):
     kernels = []
     for n, module in model.named_modules():
