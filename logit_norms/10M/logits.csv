@@ -1,0 +1,5 @@
+model,logit_norm
+7-9-3_10-10-10_ReLU,"tensor(14401.5742, device='cuda:0')"
+5-1-5_10-10-10_ReLU,"tensor(1285.1511, device='cuda:0')"
+3-1-5_10-10-10_ReLU,"tensor(339.3124, device='cuda:0')"
+1-1-5_10-10-10_ReLU,"tensor(182.7330, device='cuda:0')"
