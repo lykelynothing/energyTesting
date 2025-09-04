@@ -148,7 +148,7 @@ def test_pgd_impact(
         delta_xy = (delta_xy * n_it) / (len(dataloader) * dataloader.batch_size)
 
         data = [
-            model_name, steps[i], acc_adv, delta,
+            steps[i], acc_adv, delta,
             mean_xy, mean_en, en_x, en_xy, delta_xy
         ]
 
@@ -165,14 +165,14 @@ def save_pgt_csv(data, model_name):
     Add Model name in fields!!
     Also specify how folders will be named and organized
     '''
-    fieldnames = ['Model_name', 'Steps', 'Adversarial accuracy', 'Mean delta', 'Mean xy', 'Mean normal energy'
+    fieldnames = ['Steps', 'Adversarial accuracy', 'Mean delta', 'Mean xy', 'Mean normal energy'
                   'Mean normal xy', 'Delta xy']
     os.makedirs(f"./pgd_impact/{str(datetime.date.today())}", exist_ok=True)
     path = os.path.join(os.getcwd(), f"./pgd_impact/{str(datetime.date.today())}/{model_name}.csv")
     with open(path, mode='a') as f:
-        writer = csv.DictWriter(f, fieldnames)
+        writer = csv.writer(f, delimiter=' , ')
         if not os.path.isfile(path) or os.path.getsize(path) == 0:
-            writer.writeheader()
+            writer.writerow(fieldnames)
         writer.writerow(data)
     
     print('\n| * Saved values locally to ',  f"./pgd_impact/{str(datetime.date.today())}/{model_name}.csv")
