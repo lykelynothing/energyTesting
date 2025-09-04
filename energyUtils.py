@@ -1,4 +1,5 @@
 import torch
+import datetime
 import csv
 import subprocess
 import os
@@ -45,119 +46,136 @@ def count_parameters(model):
     return total_params, trainable_params
 
 
-def test_pgd_impact(steps : List[int],
-                model : torch.nn.Module, model_name : str, 
-                dataloader : torch.utils.data.DataLoader, dir : str, model_rob: str = '0.0', 
-                device : str = 'cpu', alpha : float = 2/255, eps : float = 8/255, n_it = 10) -> None :
+def test_pgd_impact(
+    steps: List[int],
+    model: torch.nn.Module,
+    model_name: str,
+    dataloader: torch.utils.data.DataLoader,
+    model_rob: str = '0.0',
+    device: str = 'cpu',
+    alpha: float = 2/255,
+    eps: float = 8/255,
+    n_it=10
+) -> None:
     '''
     Takes a list of different steps of PGD to try, a model, a dataloader and
     a list where the mean energies for each kind of PGD step will be stored.
     Now also stores difference between mean normal energy and mean adversarial energy.
     n_it is the fraction of the dataset that will actually be tested.
     '''
-    
     model.loss_fn = torch.nn.CrossEntropyLoss()
 
-
     for i in range(len(steps)):
+        start_time = time.time()
+        time_curr = 0.0
+        time_prev = 0.0
+        time_est = 0.0
+        time_est_prev = 0.0
 
-      start_time = time.time()
-      time_curr = 0.0
-      time_prev = 0.0
-      time_est = 0.0
-      time_est_prev = 0.0
+        acc_adv = 0
+        mean_en = 0
+        delta = 0
+        delta_xy = 0
+        mean_xy = 0
 
-      acc_adv = 0
-      mean_en = 0
-      delta = 0
-      delta_xy = 0
-      mean_xy = 0    
+        attack = PGD(model, steps=steps[i])
+        attack.set_normalization_used(
+            (0.4914, 0.4822, 0.4465),
+            (0.2023, 0.1994, 0.2010)
+        )
 
-      attack = PGD(model, steps=steps[i])
-      attack.set_normalization_used((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        for batch, (X, y) in enumerate(dataloader):
+            if batch == len(dataloader) // n_it:
+                break
+            time_prev = time.time()
+            X = X.to(device)
+            y = y.to(device)
+            adv = attack(X, y)
 
-      for batch, (X, y) in enumerate(dataloader):
-        
-        if batch == len(dataloader)// n_it:
-            break 
-        
-        time_prev = time.time()
-        X = X.to(device)
-        y = y.to(device)
-        adv = attack(X, y)
-        
-        with torch.no_grad():
-            pred = model(X)
-            pred_adv = model(adv)
-        
-        en_x = sum(compute_energy(pred).detach().cpu().numpy())
-        adv_en_x = sum(compute_energy(pred_adv).detach().cpu().numpy())
+            with torch.no_grad():
+                pred = model(X)
+                pred_adv = model(adv)
 
-        # compute mean energy of normal and adversarial logits and take  
-       # their difference, accumulate and divide later
-        delta += en_x - adv_en_x
+            en_x = sum(compute_energy(pred).detach().cpu().numpy())
+            adv_en_x = sum(compute_energy(pred_adv).detach().cpu().numpy())
 
-        # Accumulate all energy values and divide at the end
-        mean_en += adv_en_x
+            # compute mean energy of normal and adversarial logits and take  
+            # their difference, accumulate and divide later
+            delta += en_x - adv_en_x
 
-        # Compute mean xy energy
-        en_xy = (sum(compute_energyxy(pred, y).detach().cpu().numpy()))
-        adv_en_xy = (sum(compute_energyxy(pred_adv, y).detach().cpu().numpy()))
-        
-        mean_xy += adv_en_xy 
-        delta_xy += en_xy - adv_en_xy
+            # Accumulate all energy values and divide at the end
+            mean_en += adv_en_x
 
-        predicted_labels = torch.argmax(pred_adv, dim=1)
-        matches = (y == predicted_labels)
-        acc_adv += matches.sum().item()
+            # Compute mean xy energy
+            en_xy = sum(compute_energyxy(pred, y).detach().cpu().numpy())
+            adv_en_xy = sum(compute_energyxy(pred_adv, y).detach().cpu().numpy())
 
-        time_curr = time.time() - time_prev
-        time_est = 0.9 * time_curr + 0.1 * time_est_prev
-        time_est_prev = time_est
+            mean_xy += adv_en_xy
+            delta_xy += en_xy - adv_en_xy
 
-        tot_samples = len(dataloader) * dataloader.batch_size / n_it
-        progress = (batch + 1) / (len(dataloader) / n_it)
+            predicted_labels = torch.argmax(pred_adv, dim=1)
+            matches = (y == predicted_labels)
+            acc_adv += matches.sum().item()
 
-        bar = '#' * int(progress * 20)
-        print(f"\r| {model_name} | Current steps: {steps[i]} [{bar}] {progress * 100:.1f}% | Est. Time{(time_est * len(dataloader)/n_it)/ 60: .2f} min" 
-              + f"| Elapsed {(time_prev - start_time) / 60 : .2f} min | Adv Acc: {(acc_adv / ((batch+1) * dataloader.batch_size)) * 100:.2f}%" 
-              + f"| Correct : {acc_adv} | Delta : {delta / ( (batch + 1) * dataloader.batch_size) :.4f} | Mean : {mean_en / ( (batch + 1) * dataloader.batch_size) : .3f}"
-              + f"\nMean Normal : {en_x/ ( (batch + 1) * dataloader.batch_size) : .3f} | Normal xy : {en_xy / ( (batch + 1) * dataloader.batch_size) : .3f}"
-        , flush=True, end='')
+            time_curr = time.time() - time_prev
+            time_est = 0.9 * time_curr + 0.1 * time_est_prev
+            time_est_prev = time_est
 
-      # change filepath accordingly
-      os.makedirs(f"./means/{dir}", exist_ok=True)
-      path = os.path.join(os.getcwd(), f"means/{dir}")
-      with open(f"{path}/{model_name}_{model_rob}.txt", "a") as file:
-        file.write(f"\nSteps {steps[i]} mean_en : ")
-        file.write(str(mean_en / tot_samples) + '\n')
+            tot_samples = len(dataloader) * dataloader.batch_size / n_it
+            progress = (batch + 1) / (len(dataloader) / n_it)
 
-        file.write(f"Adversarial accuracy: {(100 * acc_adv * n_it) / (len(dataloader) * dataloader.batch_size) :.2f}%\n")
-        file.write(f"Mean delta: {(delta * n_it) / (len(dataloader) * dataloader.batch_size)}\n")
-        file.write(f"Mean xy: {(mean_xy * n_it) / (len(dataloader) * dataloader.batch_size)}\n")
-        file.write(f"Mean Normal Energy : {(en_x * n_it) / (len(dataloader) * dataloader.batch_size)}\n")
-        file.write(f"Mean Normal E xy : {(en_xy * n_it) / (len(dataloader) * dataloader.batch_size)}\n")
-        file.write(f"Delta xy : {(delta_xy * n_it) / (len(dataloader) * dataloader.batch_size)}\n")
-        print('\n| * Saved values locally to ',  f"{path}/{model_name}_{model_rob}.txt")
+            bar = '#' * int(progress * 20)
+            print(
+                f"\r| {model_name} | Current steps: {steps[i]} [{bar}] {progress * 100:.1f}% "
+                f"| Est. Time {(time_est * len(dataloader)/n_it) / 60:.2f} min "
+                f"| Elapsed {(time_prev - start_time) / 60:.2f} min "
+                f"| Adv Acc: {(acc_adv / ((batch+1) * dataloader.batch_size)) * 100:.2f}% "
+                f"| Correct : {acc_adv} "
+                f"| Delta : {delta / ((batch + 1) * dataloader.batch_size):.4f} "
+                f"| Mean : {mean_en / ((batch + 1) * dataloader.batch_size):.3f}\n"
+                f"Mean Normal : {en_x / ((batch + 1) * dataloader.batch_size):.3f} "
+                f"| Normal xy : {en_xy / ((batch + 1) * dataloader.batch_size):.3f}",
+                flush=True,
+                end=''
+            )
 
-      del attack
+        acc_adv = (100 * acc_adv * n_it) / (len(dataloader) * dataloader.batch_size)
+        mean_en = mean_en / tot_samples
+        delta = (delta * n_it) / (len(dataloader) * dataloader.batch_size)
+        mean_xy = (mean_xy * n_it) / (len(dataloader) * dataloader.batch_size)
+        en_x = (en_x * n_it) / (len(dataloader) * dataloader.batch_size)
+        en_xy = (en_xy * n_it) / (len(dataloader) * dataloader.batch_size)
+        delta_xy = (delta_xy * n_it) / (len(dataloader) * dataloader.batch_size)
+
+        data = [
+            model_name, steps[i], acc_adv, delta,
+            mean_xy, mean_en, en_x, en_xy, delta_xy
+        ]
+
+        save_pgt_csv(data, model_name)
+
+        del attack
+
     return
 
-def save_pgt_csv(data, path):
+
+def save_pgt_csv(data, model_name):
     '''
     Saves results of test_pgd_impact on a csv file
     Add Model name in fields!!
     Also specify how folders will be named and organized
     '''
-    fieldnames = ['Adversarial accuracy', 'Mean delta', 'Mean xy', 'Mean normal energy'
+    fieldnames = ['Model_name', 'Steps', 'Adversarial accuracy', 'Mean delta', 'Mean xy', 'Mean normal energy'
                   'Mean normal xy', 'Delta xy']
-    os.makedirs(f"./pgd_impact/{path}", exist_ok=True)
-    path = os.path.join(os.getcwd(), f"./pgd_impact/{path}/means")
+    os.makedirs(f"./pgd_impact/{str(datetime.date.today())}", exist_ok=True)
+    path = os.path.join(os.getcwd(), f"./pgd_impact/{str(datetime.date.today())}/{model_name}.csv")
     with open(path, mode='a') as f:
         writer = csv.DictWriter(f, fieldnames)
         if not os.path.isfile(path) or os.path.getsize(path) == 0:
             writer.writeheader()
         writer.writerow(data)
+    
+    print('\n| * Saved values locally to ',  f"./pgd_impact/{str(datetime.date.today())}/{model_name}.csv")
     return
 
 
