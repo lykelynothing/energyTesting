@@ -367,6 +367,29 @@ def compute_energyxy(logits, labels):
 	energy = -correct_logits
 	return energy
 
+def cross_lip(input, logits : torch.Tensor, model : torch.nn.Module, n_samples, epsilon, j, c):
+    '''
+    Following Evaluating the robustness.., computes differences between max logit
+    and all other logit values. Then estimates lipschitz constant of difference of
+    pairs of logits, and from there estimates its maximum value with extreme value theory.
+    Higher cross lip value ~ higher robustess.
+    '''
+    model.eval()
+    # TODO: compute norm of gradient also for unperturbed input
+
+    # Generate for each delta samples around p-ball to estimate max grad
+    for n in range(n_samples):
+        pert = torch.empty_like(input).uniform(-epsilon, epsilon)
+        sample = input + pert
+        new_logits = model(sample)
+        new_pred = torch.max(new_logits, dim=1)
+        # then for each logit pair compute maximum gradient norm
+
+
+
+
+
+
 def git_update():
     try:
         subprocess.run(['git', 'status'], check=True, capture_output=True)
