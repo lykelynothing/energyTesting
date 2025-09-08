@@ -12,7 +12,10 @@ from torch.utils.data import Dataset, DataLoader
 from typing import List
 from torchattacks import PGD
 from PIL import Image
-
+from multiprocessing import Pool
+from functools import partial
+from scipy.optimize import fmin
+from scipy.stats import kstest, weibull_min
 
 class ImageNetSingleImage(Dataset):
 		def __init__(self, dir, transform=None):
@@ -373,6 +376,8 @@ def cross_lip(input, logits : torch.Tensor, model : torch.nn.Module, n_samples, 
     and all other logit values. Then estimates lipschitz constant of difference of
     pairs of logits, and from there estimates its maximum value with extreme value theory.
     Higher cross lip value ~ higher robustess.
+    We generate in batches multiple points around input, and then consider maximum
+    gradient norm of each batch. Then we do MLE.
     '''
     model.eval()
     # TODO: compute norm of gradient also for unperturbed input
@@ -385,9 +390,106 @@ def cross_lip(input, logits : torch.Tensor, model : torch.nn.Module, n_samples, 
         new_pred = torch.max(new_logits, dim=1)
         # then for each logit pair compute maximum gradient norm
 
+def cross_lip_t(input : torch.Tensor, model : torch.nn.Module, c : int, j: int, epsilon : float,  n_samples : int = 1024, batches : int = 500):
+    '''
+    Same as cross_lip but only considers one pair of logits.
+    '''
+    # Clone to be sure all gradients are tracked
+    x = input.clone().detach()
+    grads = []
+    for b in range(batches):
+        start = time.time()
+        batch_norms = []
+
+        perts = torch.empty((n_samples, *x.shape[1:]), device=x.device).uniform_(-epsilon, epsilon)
+        samples = x + perts
+        samples.requires_grad_(True)
+        print("Samples shape: ", samples.shape)
+        logits = model(samples)
+        differences = logits[:, c] - logits[:, j]
+        # The following is MAJOR bullshit 
+        for i in range(n_samples):
+            grad_diffs_all = torch.autograd.grad(differences[i], samples, retain_graph=True)[0]
+            batch_norms.append(grad_diffs_all[i].norm(p=float('inf')))
+        print("Norms shape: ", batch_norms.shape)
+
+        for n in range(n_samples):
+            # This takes approximately a minute
+            # Generate sample
+            # TODO: check for better sampling method
+            pert = torch.empty_like(input).uniform_(-epsilon, epsilon)
+            sample = x + pert
+            logits = model(sample)
+            difference = logits[0, c] - logits[0, j]
+            grad_diff = torch.autograd.grad(difference, x)[0]
+            norm = grad_diff.norm(p=float('inf'))
+            batch_grads.append(norm)
+        grads.append(max(batch_grads))
+        elapsed = time.time() - start
+        print(f"Batch {b+1}/{batches} done in {elapsed:.2f} sec. Current max grad: {max(grads):.4f}, estimated time left: {(batches - b - 1) * elapsed / 60:.2f} min")
+    # MLE of grads
+    _, c, loc, sacle, ks, pVal = weibull_mle(torch.tensor(grads, device='cpu').numpy())
+    return -loc # -loc is lip estimate
 
 
+def weibull_mle(sample):
+    # I don't really understand this code
+    c_init = [0.1, 1.0, 5.0, 10.0, 20.0, 50.0, 100.0]
+    pool = Pool(processes= len(c_init) + 1)
+    # dict to save fitted params
+    fitted_paras = {"c" : [], "loc" : [], "scale" : [], "ks" : [], "pVal" : []}
+    loc_shift = np.max(sample)
+    dist_range = loc_shift - np.min(sample)
+    shape_rescale = dist_range
+    rescaled_sample = np.copy(sample)
+    rescaled_sample -= loc_shift
+    rescaled_sample /= shape_rescale
 
+    results = pool.map(partial(fit_and_test, rescaled_sample, sample, loc_shift, shape_rescale, fmin), c_init)
+
+    for res, c_i in zip(results, c_init):
+        c = res[0]
+        loc = res[1]
+        scale = res[2]
+        ks = res[3]
+        pVal = res[4]
+        print("[DEBUG][L2] c_init = {:5.5g}, fitted c = {:6.2f}, loc = {:7.2f}, scale = {:7.2f}, ks = {:4.2f}, pVal = {:4.2f}, max = {:7.2f}".format(c_i,c,loc,scale,ks,pVal,loc_shift))
+        
+        ## plot every fitted result
+        #plot_weibull(sample,c,loc,scale,ks,pVal,p)
+        
+        fitted_paras['c'].append(c)
+        fitted_paras['loc'].append(loc)
+        fitted_paras['scale'].append(scale)
+        fitted_paras['ks'].append(ks)
+        fitted_paras['pVal'].append(pVal)
+    
+    
+    # get the paras of best pVal among c_init
+    max_pVal = np.nanmax(fitted_paras['pVal'])
+    if np.isnan(max_pVal) or max_pVal < 0.001:
+        print("ill-conditioned samples. Using maximum sample value.")
+        # handle the ill conditioned case
+        return -1, -1, -max(sample), -1, -1, -1
+
+    max_pVal_idx = fitted_paras['pVal'].index(max_pVal)
+    
+    c_init_best = c_init[max_pVal_idx]
+    c_best = fitted_paras['c'][max_pVal_idx]
+    loc_best = fitted_paras['loc'][max_pVal_idx]
+    scale_best = fitted_paras['scale'][max_pVal_idx]
+    ks_best = fitted_paras['ks'][max_pVal_idx]
+    pVal_best = fitted_paras['pVal'][max_pVal_idx]
+    
+    return c_init_best, c_best, loc_best, scale_best, ks_best, pVal_best
+
+
+def fit_and_test(rescaled_sample, sample, loc_shift, shape_rescale, optimizer, c_i):
+    [c, loc, scale] = weibull_min.fit(-rescaled_sample, c_i, optimizer=optimizer)
+    loc = -loc_shift + loc * shape_rescale
+    scale *= shape_rescale
+    ks, pval = kstest(-sample, 'weibull_min', args=(c, loc, scale))
+    return c, loc, scale, ks, pval
 
 
 def git_update():
