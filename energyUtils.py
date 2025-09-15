@@ -396,35 +396,23 @@ def cross_lip_t(input : torch.Tensor, model : torch.nn.Module, c : int, j: int, 
     '''
     # Clone to be sure all gradients are tracked
     x = input.clone().detach()
-    grads = []
+    max_norms = []
     for b in range(batches):
         start = time.time()
-        batch_norms = []
 
         perts = torch.empty((n_samples, *x.shape[1:]), device=x.device).uniform_(-epsilon, epsilon)
         samples = x + perts
         samples.requires_grad_(True)
-        print("Samples shape: ", samples.shape)
         logits = model(samples)
         differences = logits[:, c] - logits[:, j]
-        # The following is MAJOR bullshit 
-        for i in range(n_samples):
-            grad_diffs_all = torch.autograd.grad(differences[i], samples, retain_graph=True)[0]
-            batch_norms.append(grad_diffs_all[i].norm(p=float('inf')))
-        print("Norms shape: ", batch_norms.shape)
+        # TODO: Check if these are actually the gradients we want
+        grads = torch.autograd.grad(differences, samples, grad_outputs=torch.ones_like(differences))[0]
+        # TODO: this is NOT the LA definition of L_1, but rather the sum of the absolute values of all entries for each grad
+        print(grads.view(grads.shape[0], -1).shape)
+        batch_norms = torch.linalg.vector_norm(grads.view(grads.shape[0], -1), ord=float(1))
 
-        for n in range(n_samples):
-            # This takes approximately a minute
-            # Generate sample
-            # TODO: check for better sampling method
-            pert = torch.empty_like(input).uniform_(-epsilon, epsilon)
-            sample = x + pert
-            logits = model(sample)
-            difference = logits[0, c] - logits[0, j]
-            grad_diff = torch.autograd.grad(difference, x)[0]
-            norm = grad_diff.norm(p=float('inf'))
-            batch_grads.append(norm)
-        grads.append(max(batch_grads))
+        print(batch_norms.shape)
+        max_norms.append(torch.max(batch_norms, dim=1))
         elapsed = time.time() - start
         print(f"Batch {b+1}/{batches} done in {elapsed:.2f} sec. Current max grad: {max(grads):.4f}, estimated time left: {(batches - b - 1) * elapsed / 60:.2f} min")
     # MLE of grads
